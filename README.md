@@ -35,7 +35,7 @@ Uma pasta contendo:
 - Os tiles `.tif` são opcionais na largada: o sistema **baixa automaticamente** o tile necessário na primeira vez que uma área é solicitada.
 - Tiles já presentes (como arquivo `.tif`, pasta extraída ou `.zip` do bloco) são detectados automaticamente e exibidos no mapa como disponíveis.
 
-O catálogo pode ser obtido em: https://github.com/openterrain/fabdem  
+O catálogo pode ser obtido em: https://github.com/EstevezCodando/HTZDataFactory/blob/main/config/fabdem_v1_2_brasil_celulas_1x1.geojson  
 Os ZIPs de blocos: https://data.bris.ac.uk/data/dataset/s5hqmjcdj8yo2ibzi9b4ew3sn (University of Bristol)
 
 ### MapBiomas — Mapa de Cobertura da Terra
@@ -137,12 +137,12 @@ docker compose down && docker compose up -d
 
 ## Acessar
 
-| Interface   | URL padrão                     | Descrição                       |
-|-------------|--------------------------------|---------------------------------|
-| Frontend    | http://localhost:8080/app      | Interface web com mapa          |
-| API Docs    | http://localhost:8080/docs     | Swagger interativo              |
-| Flower      | http://localhost:5555          | Monitor de workers Celery       |
-| Health      | http://localhost:8080/health   | Status dos dados e serviços     |
+| Interface | URL padrão                   | Descrição                   |
+| --------- | ---------------------------- | --------------------------- |
+| Frontend  | http://localhost:8080/app    | Interface web com mapa      |
+| API Docs  | http://localhost:8080/docs   | Swagger interativo          |
+| Flower    | http://localhost:5555        | Monitor de workers Celery   |
+| Health    | http://localhost:8080/health | Status dos dados e serviços |
 
 Credenciais do Flower: `FLOWER_USER` / `FLOWER_PASSWORD` definidos no `.env`.
 
@@ -229,12 +229,12 @@ docker compose up --build -d
 
 Variáveis ajustáveis no `.env`:
 
-| Variável              | Padrão | Recomendação                              |
-|-----------------------|--------|-------------------------------------------|
-| `GDAL_CACHEMAX`       | 4096   | ~25% da RAM (ex: 32 GB → 8192)            |
-| `MAX_CONCURRENT_JOBS` | 4      | ≤ número de cores                         |
-| `WORKER_CONCURRENCY`  | 4      | ≤ número de cores                         |
-| `WORKER_MEMORY_LIMIT` | 8G     | ≥ 4 GB por worker                         |
+| Variável              | Padrão | Recomendação                   |
+| --------------------- | ------ | ------------------------------ |
+| `GDAL_CACHEMAX`       | 4096   | ~25% da RAM (ex: 32 GB → 8192) |
+| `MAX_CONCURRENT_JOBS` | 4      | ≤ número de cores              |
+| `WORKER_CONCURRENCY`  | 4      | ≤ número de cores              |
+| `WORKER_MEMORY_LIMIT` | 8G     | ≥ 4 GB por worker              |
 
 Escalar workers horizontalmente:
 
@@ -249,7 +249,7 @@ docker compose up --scale worker=3 -d   # 3 × WORKER_CONCURRENCY jobs em parale
 Arquivo: `config/mapbiomas_atdi.csv` — editável sem reiniciar o sistema.
 
 | Código | Nome      | Altura típica |
-|--------|-----------|---------------|
+| ------ | --------- | ------------- |
 | 0      | open      | 0 m           |
 | 1      | suburban  | 4 m           |
 | 2      | urban 8m  | 8 m           |
@@ -266,6 +266,7 @@ Arquivo: `config/mapbiomas_atdi.csv` — editável sem reiniciar o sistema.
 ## Troubleshooting
 
 **`fabdem_ok: false` ou `mapbiomas_ok: false`**
+
 ```bash
 # Verifica o que o container enxerga
 docker compose exec api ls /dados/fabdem/
@@ -274,23 +275,28 @@ docker compose exec api ls /dados/mapbiomas/
 ```
 
 **Job fica em `pending` para sempre**
+
 ```bash
 docker compose logs worker | tail -30
 docker compose restart worker
 ```
 
 **Sentinel-2 falha**
+
 - Verifique conectividade com `planetarycomputer.microsoft.com`
 - Use OpenStreetMap como fonte alternativa de imagem
 
 **`.sol` abre no HTZ mas as coordenadas estão erradas**
+
 - Confira se a área está no hemisfério sul — o false northing é subtraído automaticamente
 - Revise se o bbox está em [west, south, east, north] (não invertido)
 
 **`.sol` abre mas sem paleta de cores**
+
 - O arquivo `.pal` deve estar na mesma pasta que o `.sol`
 
 **Erro PROJ no log da API**
+
 ```bash
 docker compose restart api
 # O startup.py corrige o PROJ_DATA automaticamente — reiniciar resolve na maioria dos casos
