@@ -1,0 +1,2753 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTZDataFactory</title>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --line: #e0e0e0;
+        --dim: #c0c0c0;
+        --text: #111111;
+        --muted: #888888;
+        --sub: #555555;
+      }
+
+      body {
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        font-size: 13px;
+      }
+
+      /* ── Header ── */
+      header {
+        background: var(--bg);
+        padding: 0 20px;
+        height: 44px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .logo {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: 0.01em;
+      }
+      .logo-sep {
+        color: var(--dim);
+        margin: 0 2px;
+      }
+      .logo-sub {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      #sys-badge {
+        margin-left: auto;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 3px;
+        background: var(--surface);
+        color: var(--muted);
+        border: 1px solid var(--line);
+      }
+      #sys-badge.ok {
+        color: var(--sub);
+        border-color: var(--dim);
+      }
+      #sys-badge.err {
+        color: var(--muted);
+      }
+
+      .btn-help {
+        background: none;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        padding: 4px 12px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .btn-help:hover {
+        border-color: var(--dim);
+        color: var(--text);
+      }
+
+      /* ── Tab nav ── */
+      #tab-nav {
+        display: flex;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+        flex-shrink: 0;
+        padding: 0 20px;
+        gap: 2px;
+      }
+      .tab-btn {
+        padding: 10px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        transition:
+          color 0.1s,
+          border-color 0.1s;
+      }
+      .tab-btn.active {
+        color: var(--text);
+        border-bottom-color: var(--text);
+      }
+      .tab-btn:hover:not(.active) {
+        color: var(--sub);
+      }
+
+      /* ── Layout ── */
+      #main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      #sidebar {
+        width: 300px;
+        background: var(--bg);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+      #map-wrap {
+        flex: 1;
+        position: relative;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ── Painéis ── */
+      .pane {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+      }
+      .pane.active {
+        display: flex;
+      }
+
+      /* ── Seções ── */
+      .section {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        flex-shrink: 0;
+      }
+      .section:last-child {
+        border-bottom: none;
+      }
+      .section.grow {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      /* ── Fontes ── */
+      .fonte-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 4px 0;
+      }
+      .fonte-name {
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--text);
+      }
+      .fonte-val {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: right;
+      }
+      .fonte-val.ok {
+        color: var(--sub);
+      }
+      .fonte-val.err {
+        color: var(--muted);
+      }
+
+      /* ── Workers ── */
+      #workers-bar {
+        display: flex;
+        gap: 3px;
+      }
+      .ws {
+        width: 14px;
+        height: 14px;
+        border-radius: 2px;
+        background: var(--line);
+        border: 1px solid var(--dim);
+      }
+      .ws.busy {
+        background: var(--sub);
+        border-color: var(--sub);
+      }
+
+      /* ── Bbox ── */
+      #bbox-display {
+        font-size: 11px;
+        font-family: "Cascadia Code", "Consolas", monospace;
+        color: var(--muted);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        padding: 6px 10px;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        min-height: 30px;
+        word-break: break-all;
+        line-height: 1.4;
+      }
+      #bbox-display.set {
+        color: var(--text);
+        border-color: var(--dim);
+        background: var(--bg);
+      }
+
+      /* ── Chips de camada ── */
+      .chips {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .chip {
+        padding: 8px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--muted);
+        user-select: none;
+        transition: all 0.1s;
+        line-height: 1.3;
+      }
+      .chip small {
+        display: block;
+        font-weight: 400;
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .chip.active {
+        background: var(--bg);
+        border-color: var(--text);
+        color: var(--text);
+      }
+      .chip.active small {
+        color: var(--sub);
+      }
+      .chip.disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      /* ── Download por produto ── */
+      #download-panel {
+        display: none;
+        margin-top: 10px;
+      }
+      #download-panel.visible {
+        display: block;
+      }
+      .dl-title {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .dl-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .dl-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 7px 10px;
+      }
+      .dl-item-left {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .dl-ext {
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .dl-meta {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .dl-btn {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--bg);
+        background: var(--text);
+        border: 1px solid var(--text);
+        border-radius: 3px;
+        padding: 4px 12px;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: opacity 0.1s;
+      }
+      .dl-btn:hover {
+        opacity: 0.8;
+      }
+      .dl-btn.zip {
+        background: var(--bg);
+        color: var(--sub);
+        border-color: var(--line);
+      }
+      .dl-btn.zip:hover {
+        border-color: var(--dim);
+        color: var(--text);
+      }
+
+      /* ── Botões ── */
+      .btn {
+        width: 100%;
+        padding: 9px 12px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.1s;
+      }
+      .btn + .btn {
+        margin-top: 6px;
+      }
+      .btn:hover:not(:disabled) {
+        opacity: 0.8;
+      }
+      .btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+      .btn-primary {
+        background: var(--text);
+        color: var(--bg);
+      }
+      .btn-secondary {
+        background: var(--surface);
+        color: var(--sub);
+        border: 1px solid var(--line);
+      }
+
+      /* ── Log ── */
+      #log,
+      #upload-log {
+        flex: 1;
+        min-height: 80px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        overflow-y: auto;
+        padding: 8px 10px;
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .ls {
+        color: var(--muted);
+      }
+      .lok {
+        color: var(--text);
+        font-weight: 700;
+      }
+      .lwarn {
+        color: var(--sub);
+      }
+      .lerr {
+        color: var(--text);
+        font-weight: 700;
+      }
+      .lline {
+        color: var(--sub);
+      }
+
+      /* ── Jobs ── */
+      #jobs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .jcard {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      .jcard-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 3px;
+      }
+      .jid {
+        font-family: "Cascadia Code", "Consolas", monospace;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .jst {
+        font-weight: 700;
+        font-size: 11px;
+      }
+      .jst.done {
+        color: var(--text);
+      }
+      .jst.running {
+        color: var(--sub);
+      }
+      .jst.error {
+        color: var(--muted);
+      }
+      .jst.pending {
+        color: var(--muted);
+      }
+      .jmeta {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .jcard a {
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-block;
+        margin-top: 4px;
+      }
+      .jcard a:hover {
+        text-decoration: underline;
+      }
+
+      /* ── Upload ── */
+      #dropzone {
+        border: 1px dashed var(--dim);
+        border-radius: 3px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--surface);
+        margin-bottom: 10px;
+      }
+      #dropzone:hover,
+      #dropzone.over {
+        border-color: var(--text);
+        color: var(--text);
+        background: var(--bg);
+      }
+      #dropzone input[type="file"] {
+        display: none;
+      }
+      #file-info {
+        font-size: 11px;
+        color: var(--text);
+        font-weight: 700;
+        min-height: 14px;
+        margin-bottom: 6px;
+      }
+
+      .type-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .type-chip {
+        flex: 1;
+        padding: 8px 6px;
+        text-align: center;
+        border-radius: 3px;
+        border: 1px solid var(--line);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        background: var(--surface);
+        transition: all 0.1s;
+      }
+      .type-chip.sel {
+        background: var(--bg);
+        border-color: var(--text);
+        color: var(--text);
+      }
+      .type-chip small {
+        display: block;
+        font-weight: 400;
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      #tipo-hint {
+        font-size: 11px;
+        color: var(--sub);
+        line-height: 1.5;
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+      }
+
+      #onion-row {
+        display: none;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: var(--sub);
+        margin-bottom: 10px;
+      }
+
+      /* ── Mapa controles ── */
+      #basemap-ctrl {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 5px 10px;
+        font-size: 11px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      #basemap-ctrl label {
+        font-weight: 700;
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      #basemap-ctrl select {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 3px 6px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      #map-legend {
+        position: absolute;
+        bottom: 28px;
+        right: 10px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 8px 12px;
+        font-size: 11px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      .legend-title {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .lr {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 3px 0;
+        color: var(--sub);
+      }
+      .lb {
+        width: 12px;
+        height: 12px;
+        border-radius: 1px;
+        flex-shrink: 0;
+      }
+
+      .tile-tooltip {
+        font-size: 11px;
+        font-weight: 700;
+        background: #fff;
+        color: #111;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 5px 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* ── Modal de ajuda ── */
+      #help-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 9000;
+        align-items: center;
+        justify-content: center;
+      }
+      #help-overlay.open {
+        display: flex;
+      }
+      #help-modal {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        width: min(820px, 95vw);
+        max-height: 88vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+      }
+      #help-modal-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      #help-modal-header span {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      #help-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 16px;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+      }
+      #help-close:hover {
+        color: var(--text);
+      }
+      #help-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--line);
+        padding: 0 16px;
+        gap: 2px;
+        background: var(--surface);
+      }
+      .htab {
+        padding: 9px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+      }
+      .htab.active {
+        color: var(--text);
+        border-bottom-color: var(--text);
+      }
+      #help-body {
+        overflow-y: auto;
+        padding: 20px 22px;
+        flex: 1;
+      }
+
+      #help-body h3 {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 18px 0 8px;
+      }
+      #help-body h3:first-child {
+        margin-top: 0;
+      }
+      #help-body h4 {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 14px 0 6px;
+      }
+      #help-body p {
+        color: var(--sub);
+        font-size: 12px;
+        line-height: 1.65;
+        margin-bottom: 6px;
+      }
+      #help-body ul {
+        color: var(--sub);
+        font-size: 12px;
+        line-height: 1.7;
+        padding-left: 18px;
+        margin-bottom: 6px;
+      }
+      #help-body li b,
+      #help-body p b {
+        color: var(--text);
+      }
+      #help-body a {
+        color: var(--text);
+      }
+      #help-body code {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        padding: 1px 5px;
+        border-radius: 2px;
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 11px;
+        color: var(--text);
+      }
+      .spec-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin: 8px 0;
+      }
+      .spec-table th {
+        background: var(--surface);
+        color: var(--muted);
+        font-weight: 700;
+        padding: 6px 10px;
+        text-align: left;
+        border: 1px solid var(--line);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .spec-table td {
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        color: var(--sub);
+      }
+      .spec-table td b {
+        color: var(--text);
+      }
+      .spec-table tr:nth-child(even) td {
+        background: var(--surface);
+      }
+
+      .ext {
+        font-family: "Cascadia Code", "Consolas", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .notice {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--sub);
+        margin: 10px 0;
+        line-height: 1.5;
+      }
+      .notice b {
+        color: var(--text);
+      }
+
+      /* Leaflet draw toolbar override */
+      .leaflet-draw-toolbar a {
+        background-color: #fff !important;
+        border-color: #ddd !important;
+      }
+      .leaflet-draw-toolbar a:hover {
+        background-color: #f5f5f5 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── HEADER ── -->
+    <header>
+      <span class="logo">HTZDataFactory</span>
+      <span class="logo-sep">/</span>
+      <span class="logo-sub">ATDI data generator</span>
+      <button class="btn-help" onclick="abrirAjuda()">Ajuda</button>
+      <div id="sys-badge">conectando</div>
+    </header>
+
+    <!-- ── TABS ── -->
+    <div id="tab-nav">
+      <button class="tab-btn active" onclick="mudarAba('gerar', this)">
+        Gerar por Área
+      </button>
+      <button class="tab-btn" onclick="mudarAba('upload', this)">
+        Converter Arquivo
+      </button>
+      <button class="tab-btn" onclick="mudarAba('jobs', this)">
+        Histórico
+      </button>
+    </div>
+
+    <!-- ── MAIN ── -->
+    <div id="main">
+      <div id="sidebar">
+        <!-- ─── PAINEL: GERAR ─── -->
+        <div id="pane-gerar" class="pane active">
+          <div class="section">
+            <div class="label">Fontes de dados</div>
+            <div id="fontes-status">
+              <div class="fonte-row">
+                <span class="fonte-name">FABDEM</span>
+                <span class="fonte-val" id="fd-fabdem">carregando</span>
+                <button
+                  id="btn-reload-fabdem"
+                  title="Recarregar grade"
+                  style="
+                    margin-left: 6px;
+                    padding: 0 5px;
+                    font-size: 11px;
+                    line-height: 18px;
+                    background: none;
+                    border: 1px solid #ccc;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    color: #555;
+                  "
+                >
+                  ↺
+                </button>
+              </div>
+              <div class="fonte-row">
+                <span class="fonte-name">MapBiomas</span>
+                <span class="fonte-val" id="fd-mapbiomas">carregando</span>
+              </div>
+              <div class="fonte-row">
+                <span class="fonte-name">Sentinel-2</span>
+                <span class="fonte-val" id="fd-sentinel"
+                  >Planetary Computer</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="label" style="margin-bottom: 8px">
+              Workers
+              <span
+                id="workers-count"
+                style="
+                  font-weight: 400;
+                  letter-spacing: 0;
+                  text-transform: none;
+                  font-size: 10px;
+                "
+              ></span>
+            </div>
+            <div id="workers-bar"></div>
+          </div>
+
+          <div class="section">
+            <div class="label">Área de interesse</div>
+            <div id="bbox-display">Desenhe um retângulo no mapa</div>
+            <div class="chips" id="layer-chips" style="margin-bottom: 10px">
+              <div class="chip active" data-layer="geo">
+                FABDEM<small>.geo — terreno 30m</small>
+              </div>
+              <div class="chip active" data-layer="sol">
+                MapBiomas<small>.sol + .pal — clutter 30m</small>
+              </div>
+              <div class="chip active" data-layer="img">
+                Imagem<small>.img — 15m</small>
+              </div>
+            </div>
+            <div
+              id="img-fonte-sel"
+              style="
+                margin: -4px 0 10px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                color: #555;
+              "
+            >
+              <span style="font-weight: 600">Fonte .img:</span>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 3px;
+                  cursor: pointer;
+                "
+              >
+                <input
+                  type="radio"
+                  name="img_fonte"
+                  value="sentinel2"
+                  checked
+                />
+                Sentinel-2
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 3px;
+                  cursor: pointer;
+                "
+              >
+                <input type="radio" name="img_fonte" value="osm" />
+                OpenStreetMap
+              </label>
+              <span
+                id="osm-zoom-wrap"
+                style="display: none; align-items: center; gap: 4px"
+              >
+                zoom
+                <select
+                  id="osm-zoom"
+                  style="
+                    font-size: 12px;
+                    padding: 1px 4px;
+                    border: 1px solid #ccc;
+                    border-radius: 3px;
+                  "
+                >
+                  <option value="14">14 (~9.6 m/px)</option>
+                  <option value="15" selected>15 (~4.8 m/px)</option>
+                  <option value="16">16 (~2.4 m/px)</option>
+                </select>
+              </span>
+            </div>
+            <button class="btn btn-primary" id="btn-gerar" disabled>
+              Gerar
+            </button>
+            <button class="btn btn-secondary" id="btn-limpar">
+              Limpar seleção
+            </button>
+          </div>
+
+          <div class="section grow">
+            <div class="label">Log</div>
+            <div id="log"><span class="lline">Aguardando...</span></div>
+            <div id="download-panel">
+              <div class="dl-title">Arquivos gerados</div>
+              <div class="dl-grid" id="dl-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── PAINEL: UPLOAD ─── -->
+        <div id="pane-upload" class="pane">
+          <div class="section">
+            <div class="label">Tipo de conversão</div>
+            <div class="type-row">
+              <div
+                class="type-chip sel"
+                data-tipo="dem"
+                onclick="selTipo(this)"
+              >
+                .geo<small>DEM / Elevação</small>
+              </div>
+              <div
+                class="type-chip"
+                data-tipo="clutter"
+                onclick="selTipo(this)"
+              >
+                .sol<small>Clutter / Uso do solo</small>
+              </div>
+              <div class="type-chip" data-tipo="img" onclick="selTipo(this)">
+                .img<small>Imagem / Ortofoto</small>
+              </div>
+            </div>
+            <div id="tipo-hint">
+              GeoTIFF de modelo de elevação (DEM). Float32 ou Int16, valores em
+              metros. Qualquer projeção aceita — reprojetado automaticamente
+              para 30m UTM.
+            </div>
+            <div id="formato-clutter-row" style="display: none">
+              <div class="label" style="margin-top: 10px; margin-bottom: 8px">
+                Formato do arquivo de clutter
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px">
+                <label
+                  style="
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 8px;
+                    cursor: pointer;
+                    padding: 8px 10px;
+                    border: 1px solid var(--line);
+                    border-radius: 3px;
+                    background: var(--surface);
+                  "
+                  id="fmt-mapbiomas-label"
+                >
+                  <input
+                    type="radio"
+                    name="fmt-clutter"
+                    value="mapbiomas"
+                    id="fmt-mapbiomas"
+                    checked
+                    style="margin-top: 2px; accent-color: var(--text)"
+                  />
+                  <span>
+                    <span
+                      style="
+                        font-weight: 700;
+                        font-size: 12px;
+                        color: var(--text);
+                      "
+                      >Formato MapBiomas</span
+                    >
+                    <span
+                      style="
+                        display: block;
+                        font-size: 11px;
+                        color: var(--muted);
+                        margin-top: 1px;
+                      "
+                      >Códigos 0–48 exportados do mapbiomas.org —
+                      reclassificados automaticamente via tabela CSV</span
+                    >
+                  </span>
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 8px;
+                    cursor: pointer;
+                    padding: 8px 10px;
+                    border: 1px solid var(--line);
+                    border-radius: 3px;
+                    background: var(--surface);
+                  "
+                  id="fmt-atdi-label"
+                >
+                  <input
+                    type="radio"
+                    name="fmt-clutter"
+                    value="atdi"
+                    id="fmt-atdi"
+                    style="margin-top: 2px; accent-color: var(--text)"
+                  />
+                  <span>
+                    <span
+                      style="
+                        font-weight: 700;
+                        font-size: 12px;
+                        color: var(--text);
+                      "
+                      >Formato ATDI direto</span
+                    >
+                    <span
+                      style="
+                        display: block;
+                        font-size: 11px;
+                        color: var(--muted);
+                        margin-top: 1px;
+                      "
+                      >Códigos 0–9 já no padrão HTZ — 1=suburban, 2=urban_8m,
+                      5=forest, etc. Sem reclassificação.</span
+                    >
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="label">Arquivo GeoTIFF</div>
+            <div
+              id="dropzone"
+              onclick="document.getElementById('file-input').click()"
+              ondragover="
+                event.preventDefault();
+                this.classList.add('over');
+              "
+              ondragleave="this.classList.remove('over')"
+              ondrop="onDrop(event)"
+            >
+              <input
+                type="file"
+                id="file-input"
+                accept=".tif,.tiff"
+                onchange="onFileSelect(this)"
+              />
+              <div style="font-weight: 700; margin-bottom: 4px">
+                Clique ou arraste aqui
+              </div>
+              <div style="font-size: 11px">
+                .tif / .tiff — qualquer projeção
+              </div>
+            </div>
+            <div id="file-info"></div>
+            <div id="onion-row">
+              <input type="checkbox" id="cb-onion" checked />
+              <label for="cb-onion">Aplicar efeito cebola urbano</label>
+            </div>
+            <button class="btn btn-primary" id="btn-upload" disabled>
+              Converter para ATDI
+            </button>
+            <button class="btn btn-secondary" onclick="abrirAjuda('formatos')">
+              Ver especificações
+            </button>
+          </div>
+
+          <div class="section grow">
+            <div class="label">Log</div>
+            <div id="upload-log">
+              <span class="lline">Aguardando arquivo...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── PAINEL: HISTÓRICO ─── -->
+        <div id="pane-jobs" class="pane">
+          <div class="section grow" style="overflow-y: auto">
+            <div class="label">Jobs recentes</div>
+            <div id="jobs-list"></div>
+          </div>
+        </div>
+      </div>
+      <!-- /sidebar -->
+
+      <!-- ── MAPA ── -->
+      <div id="map-wrap">
+        <div id="map"></div>
+
+        <div id="basemap-ctrl">
+          <label>Mapa</label>
+          <select id="basemap-select">
+            <option value="osm">OpenStreetMap</option>
+            <option value="sat">Google Satélite</option>
+            <option value="hybrid">Google Híbrido</option>
+            <option value="esri">ESRI Imagery</option>
+          </select>
+        </div>
+
+        <div id="map-legend">
+          <div class="legend-title">Grade FABDEM</div>
+          <div class="lr">
+            <div class="lb" style="background: #22aa55; opacity: 0.6"></div>
+            Tile disponível
+          </div>
+          <div class="lr">
+            <div
+              class="lb"
+              style="background: #fff; border: 1px dashed #cc3333"
+            ></div>
+            Não baixado
+          </div>
+          <div class="lr" style="margin-top: 6px">
+            <div
+              class="lb"
+              style="background: #dde8ff; border: 1px solid #2255aa"
+            ></div>
+            Cobertura MapBiomas
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /main -->
+
+    <!-- ── MODAL DE AJUDA ── -->
+    <div id="help-overlay" onclick="if (event.target === this) fecharAjuda();">
+      <div id="help-modal">
+        <div id="help-modal-header">
+          <span>Documentação</span>
+          <button id="help-close" onclick="fecharAjuda()">&#10005;</button>
+        </div>
+        <div id="help-tabs">
+          <button class="htab active" onclick="mudarHelpTab('o-que-e', this)">
+            Visão geral
+          </button>
+          <button class="htab" onclick="mudarHelpTab('gerar', this)">
+            Gerar por Área
+          </button>
+          <button class="htab" onclick="mudarHelpTab('upload', this)">
+            Converter Arquivo
+          </button>
+          <button class="htab" onclick="mudarHelpTab('formatos', this)">
+            Formatos
+          </button>
+          <button class="htab" onclick="mudarHelpTab('faq', this)">FAQ</button>
+        </div>
+        <div id="help-body">
+          <!-- VISÃO GERAL -->
+          <div class="hpane" id="hp-o-que-e">
+            <h3>O que é</h3>
+            <p>
+              O HTZDataFactory converte dados geoespaciais abertos para o
+              formato binário <b>ATDI</b>, nativo do <b>HTZ </b> e
+              <b>ICS Telecom</b>. Você define uma área no mapa; o sistema busca
+              as fontes, processa e entrega um ZIP pronto.
+            </p>
+
+            <h3>O que é gerado</h3>
+            <table class="spec-table">
+              <tr>
+                <th>Arquivo</th>
+                <th>Conteúdo</th>
+                <th>Resolução</th>
+                <th>Fonte</th>
+              </tr>
+              <tr>
+                <td><span class="ext">.geo</span></td>
+                <td>Modelo digital de terreno (elevação)</td>
+                <td>30 m/pixel</td>
+                <td>FABDEM v1.2</td>
+              </tr>
+              <tr>
+                <td><span class="ext">.sol</span></td>
+                <td>Clutter — tipo de superfície</td>
+                <td>30 m/pixel</td>
+                <td>MapBiomas Coll. 10</td>
+              </tr>
+              <tr>
+                <td><span class="ext">.pal</span></td>
+                <td>Paleta de cores do clutter</td>
+                <td>—</td>
+                <td>Gerado</td>
+              </tr>
+              <tr>
+                <td><span class="ext">.img</span></td>
+                <td>Imagem de satélite grayscale</td>
+                <td>15 m/pixel</td>
+                <td>Sentinel-2 L2A</td>
+              </tr>
+              <tr>
+                <td><span class="ext">manifesto.json</span></td>
+                <td>Metadados, fontes e disclaimer</td>
+                <td>—</td>
+                <td>Gerado</td>
+              </tr>
+            </table>
+
+            <h3>Dois modos de uso</h3>
+            <ul>
+              <li>
+                <b>Gerar por Área</b> — desenhe um retângulo no mapa. O sistema
+                busca dados automaticamente e gera o pacote.
+              </li>
+              <li>
+                <b>Converter Arquivo</b> — envie seu próprio GeoTIFF e converta
+                para ATDI binário.
+              </li>
+            </ul>
+
+            <h3>Fontes de dados</h3>
+            <table class="spec-table">
+              <tr>
+                <th>Dado</th>
+                <th>Fonte</th>
+                <th>Cobertura</th>
+                <th>Licença</th>
+              </tr>
+              <tr>
+                <td>Terreno</td>
+                <td>FABDEM v1.2 — Univ. Bristol</td>
+                <td>Brasil, tiles sob demanda</td>
+                <td>CC-BY-4.0</td>
+              </tr>
+              <tr>
+                <td>Uso do solo</td>
+                <td>MapBiomas Collection 10</td>
+                <td>Arquivo local montado</td>
+                <td>CC-BY-4.0</td>
+              </tr>
+              <tr>
+                <td>Imagem</td>
+                <td>Sentinel-2 L2A (ESA/Copernicus)</td>
+                <td>Global via STAC</td>
+                <td>Open Access</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- GERAR POR ÁREA -->
+          <div class="hpane" id="hp-gerar" style="display: none">
+            <h3>Como usar</h3>
+            <ul>
+              <li>
+                <b>1. Selecione o basemap</b> — use o seletor no canto superior
+                direito do mapa.
+              </li>
+              <li>
+                <b>2. Desenhe o retângulo</b> — clique na ferramenta de
+                retângulo na barra do mapa e arraste sobre a área de interesse.
+              </li>
+              <li>
+                <b>3. Escolha as camadas</b> — selecione quais arquivos quer
+                gerar: <code>.geo</code>, <code>.sol</code>, <code>.img</code>.
+              </li>
+              <li>
+                <b>4. Gerar</b> — clique em <b>Gerar pacote HTZ</b>. O log exibe
+                o progresso em tempo real.
+              </li>
+              <li>
+                <b>5. Download</b> — quando concluído, o link de download
+                aparece no log.
+              </li>
+            </ul>
+
+            <h3>Grade FABDEM no mapa</h3>
+            <p>
+              A grade exibe os tiles FABDEM 1°×1° disponíveis localmente. Tiles
+              não baixados são obtidos automaticamente do servidor da
+              Universidade de Bristol na primeira requisição — o processo demora
+              mais na primeira vez, e nas seguintes o tile já está em cache.
+            </p>
+
+            <h3>Limites recomendados</h3>
+            <table class="spec-table">
+              <tr>
+                <th>Área</th>
+                <th>Dimensão</th>
+                <th>Tempo estimado</th>
+              </tr>
+              <tr>
+                <td>0,5° × 0,5°</td>
+                <td>~55 × 55 km</td>
+                <td>30–60 s</td>
+              </tr>
+              <tr>
+                <td>1° × 1°</td>
+                <td>~111 × 111 km</td>
+                <td>60–120 s</td>
+              </tr>
+              <tr>
+                <td>2° × 2°</td>
+                <td>~222 × 222 km</td>
+                <td>2–5 min</td>
+              </tr>
+            </table>
+            <div class="notice">
+              <b>Áreas acima de 3°×3°</b> não são recomendadas — consomem muita
+              RAM e podem levar vários minutos.
+            </div>
+          </div>
+
+          <!-- CONVERTER ARQUIVO -->
+          <div class="hpane" id="hp-upload" style="display: none">
+            <h3>Como converter</h3>
+            <ul>
+              <li>
+                <b>1. Tipo</b> — selecione o tipo de saída: DEM
+                (<code>.geo</code>), Clutter (<code>.sol</code>) ou Imagem
+                (<code>.img</code>).
+              </li>
+              <li>
+                <b>2. Formato do clutter</b> — ao selecionar Clutter, escolha se
+                o seu TIFF está em formato MapBiomas (códigos 0–48,
+                reclassificados via CSV) ou já no padrão ATDI (códigos 0–9,
+                usados diretamente).
+              </li>
+              <li>
+                <b>3. Arquivo</b> — arraste ou clique para selecionar o GeoTIFF.
+              </li>
+              <li>
+                <b>4. Converter</b> — o sistema reprojeta para UTM e gera o
+                binário ATDI.
+              </li>
+              <li>
+                <b>5. Download</b> — link aparece no log quando a conversão
+                termina.
+              </li>
+            </ul>
+
+            <h3>Usando seu próprio MapBiomas</h3>
+            <ul>
+              <li>
+                Exporte a área de interesse em
+                <a href="https://mapbiomas.org" target="_blank"
+                  >mapbiomas.org</a
+                >
+                como GeoTIFF de classificação (1 banda, UInt8).
+              </li>
+              <li>
+                Use <b>Converter Arquivo → Clutter → Formato MapBiomas</b>. A
+                tabela de reclassificação padrão é aplicada.
+              </li>
+            </ul>
+
+            <h3>Criando um TIFF já no padrão ATDI</h3>
+            <p>
+              Se você já sabe os tipos de clutter da sua área, pode produzir um
+              TIFF diretamente com os códigos 0–9. Selecione
+              <b>Formato ATDI direto</b> no upload — os valores são usados sem
+              reclassificação. Consulte a aba <b>Formatos</b> para a tabela
+              completa de códigos, cores e atenuações.
+            </p>
+
+            <h3>Usando seu próprio DEM</h3>
+            <p>
+              Compatível com SRTM, ALOS AW3D30, Copernicus DEM, FABDEM ou
+              qualquer GeoTIFF de elevação em metros. Qualquer projeção é aceita
+              — reprojetado para 30m UTM.
+            </p>
+
+            <h3>Usando imagem de satélite ou ortofoto</h3>
+            <p>
+              Envie GeoTIFF RGB (3 bandas) ou grayscale (1 banda). O sistema
+              normaliza para 8-bit e reprojeta para 15m UTM.
+            </p>
+          </div>
+
+          <!-- FORMATOS -->
+          <div class="hpane" id="hp-formatos" style="display: none">
+            <div class="notice">
+              <b>Requisito geral:</b> GeoTIFF com CRS definido, ou acompanhado
+              de arquivo <code>.tfw</code> no mesmo diretório (o sistema assume
+              WGS84 nesse caso).
+            </div>
+
+            <h3>DEM → <span class="ext">.geo</span></h3>
+            <table class="spec-table">
+              <tr>
+                <th>Campo</th>
+                <th>Requisito</th>
+              </tr>
+              <tr>
+                <td>Formato</td>
+                <td>GeoTIFF (.tif / .tiff)</td>
+              </tr>
+              <tr>
+                <td>Tipo de dado</td>
+                <td>Float32, Int16 ou Int32 — valores em <b>metros</b></td>
+              </tr>
+              <tr>
+                <td>Bandas</td>
+                <td>1 banda</td>
+              </tr>
+              <tr>
+                <td>Projeção</td>
+                <td>Qualquer — WGS84, UTM, SIRGAS2000...</td>
+              </tr>
+              <tr>
+                <td>Resolução</td>
+                <td>Qualquer — reamostrado para 30m UTM</td>
+              </tr>
+              <tr>
+                <td>Saída</td>
+                <td>
+                  <code>.geo</code> int16, 30m UTM, header ATDI 1010 bytes
+                </td>
+              </tr>
+            </table>
+
+            <h3>
+              Clutter → <span class="ext">.sol</span> +
+              <span class="ext">.pal</span>
+            </h3>
+            <table class="spec-table">
+              <tr>
+                <th>Campo</th>
+                <th>Requisito</th>
+              </tr>
+              <tr>
+                <td>Formato</td>
+                <td>GeoTIFF (.tif / .tiff)</td>
+              </tr>
+              <tr>
+                <td>Tipo de dado</td>
+                <td>UInt8 ou UInt16 — valores inteiros por pixel</td>
+              </tr>
+              <tr>
+                <td>Bandas</td>
+                <td>1 banda</td>
+              </tr>
+              <tr>
+                <td>Projeção</td>
+                <td>Qualquer — reprojetado para 30m UTM</td>
+              </tr>
+              <tr>
+                <td>Modo MapBiomas</td>
+                <td>
+                  Códigos 0–48 → reclassificados via
+                  <code>mapbiomas_atdi.csv</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Modo ATDI direto</td>
+                <td>Códigos 0–9 → usados diretamente, sem reclassificação</td>
+              </tr>
+              <tr>
+                <td>Saída</td>
+                <td><code>.sol</code> + <code>.pal</code>, uint8, 30m UTM</td>
+              </tr>
+            </table>
+
+            <h3>Tabela de clutter HTZ — códigos ATDI</h3>
+            <p>
+              Cada pixel do <code>.sol</code> contém um código inteiro (0–9) que
+              o HTZ usa para definir a altura efetiva do obstáculo naquele pixel
+              — afetando perda por difração nos modelos de propagação (ITU-R
+              P.526, Longley-Rice, etc.).
+            </p>
+            <table class="spec-table">
+              <tr>
+                <th>Código</th>
+                <th>Nome ATDI</th>
+                <th>Cor no HTZ</th>
+                <th>Altura clutter</th>
+                <th>Atenuação típica</th>
+                <th>Uso / fonte</th>
+              </tr>
+              <tr>
+                <td><b>0</b></td>
+                <td>open</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #fff;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Branco
+                </td>
+                <td>0 m</td>
+                <td>0 dB</td>
+                <td>Campo aberto, água, nodata. Sem atenuação adicional.</td>
+              </tr>
+              <tr>
+                <td><b>1</b></td>
+                <td>suburban</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #7ec8e3;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Azul claro
+                </td>
+                <td>8 m</td>
+                <td>~5–8 dB</td>
+                <td>Suburbano, residencial baixo, bairros periféricos.</td>
+              </tr>
+              <tr>
+                <td><b>2</b></td>
+                <td>urban_8m</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #4a90d9;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Azul
+                </td>
+                <td>8 m</td>
+                <td>~10–12 dB</td>
+                <td>
+                  Urbano base — periferia de centros urbanos. Ponto de partida
+                  do efeito cebola.
+                </td>
+              </tr>
+              <tr>
+                <td><b>3</b></td>
+                <td>urban_15m</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #e8943a;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Laranja
+                </td>
+                <td>15 m</td>
+                <td>~15 dB</td>
+                <td>
+                  Urbano médio — gerado automaticamente pelo efeito cebola (anel
+                  de 300m).
+                </td>
+              </tr>
+              <tr>
+                <td><b>4</b></td>
+                <td>urban_30m</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #3ab8a0;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Verde-água
+                </td>
+                <td>30 m</td>
+                <td>~20 dB</td>
+                <td>
+                  Urbano denso — gerado pelo efeito cebola (anel de 600m).
+                </td>
+              </tr>
+              <tr>
+                <td><b>5</b></td>
+                <td>forest</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #2d7a2d;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Verde
+                </td>
+                <td>15 m</td>
+                <td>~10–15 dB</td>
+                <td>
+                  Floresta densa, dossel fechado (Amazônia, Mata Atlântica).
+                </td>
+              </tr>
+              <tr>
+                <td><b>6</b></td>
+                <td>hydro</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #82e0aa;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Verde claro
+                </td>
+                <td>0 m</td>
+                <td>0 dB</td>
+                <td>
+                  Superfície aquática — rios, lagos, reservatórios. Sem
+                  obstáculo.
+                </td>
+              </tr>
+              <tr>
+                <td><b>7</b></td>
+                <td>urban_50m</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #f4d03f;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Amarelo
+                </td>
+                <td>50 m</td>
+                <td>~25 dB</td>
+                <td>
+                  Centro urbano consolidado — gerado pelo efeito cebola (anel de
+                  900m).
+                </td>
+              </tr>
+              <tr>
+                <td><b>8</b></td>
+                <td>wood</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #a0724a;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Marrom
+                </td>
+                <td>8 m</td>
+                <td>~6–10 dB</td>
+                <td>Cerrado, caatinga, vegetação arbustiva — dossel aberto.</td>
+              </tr>
+              <tr>
+                <td><b>9</b></td>
+                <td>roof</td>
+                <td>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 14px;
+                      height: 14px;
+                      background: #c0392b;
+                      border: 1px solid #ccc;
+                      vertical-align: middle;
+                    "
+                  ></span>
+                  Vermelho
+                </td>
+                <td>5 m</td>
+                <td>~3–5 dB</td>
+                <td>
+                  Telhado, superfície impermeável — áreas edificadas não
+                  classificadas como urbano.
+                </td>
+              </tr>
+            </table>
+
+            <div class="notice">
+              <b>Altura de clutter vs. atenuação:</b> o HTZ usa a altura de
+              clutter (coluna "Altura clutter") nos modelos de propagação para
+              calcular perda por difração adicional sobre o terreno — não é uma
+              perda fixa em dB. Os valores de atenuação típica acima são
+              referências para modelos empíricos como Okumura-Hata e COST-231.
+              Os valores exatos dependem da frequência, geometria do enlace e
+              modelo selecionado no HTZ.
+            </div>
+
+            <h3>
+              Como criar um TIFF pronto para <span class="ext">.sol</span>
+            </h3>
+            <p>
+              Você pode produzir seu próprio TIFF de clutter em dois formatos:
+            </p>
+
+            <h4>Opção A — Formato MapBiomas (reclassificação automática)</h4>
+            <p>
+              Use quando você exportou dados do
+              <a href="https://mapbiomas.org" target="_blank">mapbiomas.org</a>
+              ou tem um mapa de uso do solo com a classificação MapBiomas:
+            </p>
+            <ul>
+              <li>1 banda, tipo <b>UInt8</b> ou UInt16</li>
+              <li>
+                Valores inteiros representando classes MapBiomas (ex: 3 =
+                Floresta Ombrófila, 24 = Área Urbanizada)
+              </li>
+              <li>
+                O sistema aplica a tabela
+                <code>config/mapbiomas_atdi.csv</code> automaticamente
+              </li>
+              <li>No upload, selecione <b>"Formato MapBiomas"</b></li>
+            </ul>
+
+            <h4>Opção B — Formato ATDI direto (sem reclassificação)</h4>
+            <p>
+              Use quando você já sabe o tipo de clutter de cada região e quer
+              controle total sobre o resultado:
+            </p>
+            <ul>
+              <li>1 banda, tipo <b>UInt8</b></li>
+              <li>
+                Valores <b>0 a 9</b> conforme a tabela acima (0 = open, 1 =
+                suburban, 5 = forest, etc.)
+              </li>
+              <li>
+                Cada pixel já contém o código ATDI final — nenhuma
+                reclassificação é aplicada
+              </li>
+              <li>No upload, selecione <b>"Formato ATDI direto"</b></li>
+            </ul>
+            <p>Exemplo de criação em Python com <code>rasterio</code>:</p>
+            <pre
+              style="
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 3px;
+                padding: 10px 12px;
+                font-size: 11px;
+                font-family:
+                  &quot;Cascadia Code&quot;, &quot;Consolas&quot;, monospace;
+                overflow-x: auto;
+                color: var(--sub);
+                line-height: 1.6;
+                margin: 6px 0;
+              "
+            >
+import numpy as np, rasterio
+from rasterio.transform import from_bounds
+from rasterio.crs import CRS
+
+# Grade 100x100 px — WGS84, bbox exemplo
+arr = np.zeros((100,100), dtype=np.uint8)
+arr[20:40, 20:40] = 5   # floresta
+arr[60:80, 60:80] = 2   # urbano_8m (cebola vai expandir automaticamente)
+arr[10:20, 70:80] = 6   # hidrografia
+
+transform = from_bounds(-47.5, -16.0, -47.0, -15.5, 100, 100)
+with rasterio.open(
+    "meu_clutter.tif", "w",
+    driver="GTiff", height=100, width=100,
+    count=1, dtype=np.uint8,
+    crs=CRS.from_epsg(4326),
+    transform=transform,
+) as dst:
+    dst.write(arr, 1)
+# Envie meu_clutter.tif → Converter Arquivo → Clutter → Formato ATDI direto</pre
+            >
+
+            <h3>Efeito cebola urbano</h3>
+            <div class="notice">
+              <b>O que é:</b> o efeito cebola é uma técnica de pós-processamento
+              aplicada automaticamente pelo sistema sobre pixels classificados
+              como <b>urban_8m (código 2)</b>. Ele expande a área urbana em
+              anéis concêntricos com alturas de clutter crescentes, simulando o
+              gradiente real de densidade das cidades — onde o centro tem
+              edificações mais altas que a periferia.<br /><br />
+              <b>Como funciona:</b> a partir de cada pixel urban_8m, o sistema
+              aplica erosão morfológica em três passadas de 300m cada (≈ 10
+              pixels a 30m/pixel):<br />
+              &nbsp;&nbsp;&nbsp;• Anel externo (300m): mantém <b>urban_8m</b> —
+              8m de altura<br />
+              &nbsp;&nbsp;&nbsp;• Anel intermediário (300–600m): eleva para
+              <b>urban_15m</b> — 15m<br />
+              &nbsp;&nbsp;&nbsp;• Anel interno (600–900m): eleva para
+              <b>urban_30m</b> — 30m<br />
+              &nbsp;&nbsp;&nbsp;• Núcleo (acima de 900m): eleva para
+              <b>urban_50m</b> — 50m<br /><br />
+              <b>Quando desativar:</b> se o seu TIFF já contém os códigos
+              urbanos corretos (2, 3, 4, 7) mapeados manualmente, desmarque a
+              opção "Aplicar efeito cebola urbano" no upload para evitar dupla
+              expansão.<br /><br />
+              <b>Limitação:</b> o efeito cebola é uma aproximação estatística —
+              não representa a geometria real dos edifícios. Para simulações de
+              alta precisão, use dados de footprint de edificações.
+            </div>
+
+            <h3>Imagem → <span class="ext">.img</span></h3>
+            <table class="spec-table">
+              <tr>
+                <th>Campo</th>
+                <th>Requisito</th>
+              </tr>
+              <tr>
+                <td>Formato</td>
+                <td>GeoTIFF (.tif / .tiff)</td>
+              </tr>
+              <tr>
+                <td>Bandas</td>
+                <td>1 (grayscale) ou 3 (RGB) — convertido para grayscale</td>
+              </tr>
+              <tr>
+                <td>Tipo de dado</td>
+                <td>UInt8, UInt16 ou Float32 — normalizado para 8-bit</td>
+              </tr>
+              <tr>
+                <td>Projeção</td>
+                <td>Qualquer</td>
+              </tr>
+              <tr>
+                <td>Saída</td>
+                <td><code>.img</code> uint8 grayscale, 15m UTM</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- FAQ -->
+          <div class="hpane" id="hp-faq" style="display: none">
+            <h3>O .sol ficou sem dados na minha área</h3>
+            <p>
+              O MapBiomas local cobre apenas a área do arquivo TIF montado no
+              servidor. Verifique o retângulo azul no mapa — sua seleção deve
+              estar dentro dele. Para outras regiões, use
+              <b>Converter Arquivo → Clutter</b>.
+            </p>
+
+            <h3>Tiles vermelhos no mapa impedem a geração?</h3>
+            <p>
+              Não. Tiles vermelhos são <b>baixados automaticamente</b> quando
+              necessários, diretamente do servidor da Universidade de Bristol. A
+              primeira requisição demora mais; as seguintes são imediatas.
+            </p>
+
+            <h3>Como abrir no HTZ</h3>
+            <p>
+              Descompacte o ZIP. No HTZ :
+              <code>File → Import → ATDI Files</code>. Selecione o
+              <code>.sol</code> ou <code>.geo</code> — o software carrega
+              automaticamente os demais arquivos do mesmo diretório com o mesmo
+              nome base.
+            </p>
+
+            <h3>Tamanho máximo de área</h3>
+            <p>
+              Recomendamos até <b>2°×2°</b> (~222km×222km). Para projetos
+              maiores, divida em blocos.
+            </p>
+
+            <h3>Posso usar minha própria tabela de reclassificação?</h3>
+            <p>
+              Sim. Edite <code>config/mapbiomas_atdi.csv</code> no servidor —
+              nenhum rebuild Docker é necessário. Colunas:
+              <code
+                >codigo_mapbiomas, nome_mapbiomas, codigo_atdi, nome_atdi,
+                justificativa</code
+              >.
+            </p>
+
+            <h3>Sentinel-2 não encontrou imagem</h3>
+            <p>
+              O sistema busca cenas com menos de 20% de nuvens nos últimos 3
+              anos. Em regiões com cobertura persistente de nuvens, use
+              <b>Converter Arquivo → Imagem</b>.
+            </p>
+
+            <h3>Como escalar workers</h3>
+            <p>
+              No servidor: <code>docker compose up --scale worker=4 -d</code>.
+              Cada worker usa ~2 GB de RAM no pico.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ── Estado global ──────────────────────────────────────────────────────────
+      const API = "";
+      let currentBbox = null;
+      let activeLayers = new Set(["geo", "sol", "img"]);
+      let currentJobId = null;
+      let uploadJobId = null;
+      let pollInterval = null;
+      let uploadPoll = null;
+      let lastLogLen = 0;
+      let lastUploadLogLen = 0;
+      let selectedFile = null;
+      let selectedTipo = "dem";
+      let drawnItems = null;
+
+      // ── Tabs ───────────────────────────────────────────────────────────────────
+      function mudarAba(nome, btn) {
+        document
+          .querySelectorAll(".pane")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("pane-" + nome).classList.add("active");
+        if (btn) btn.classList.add("active");
+        if (nome === "jobs") atualizarJobs();
+      }
+
+      // ── Mapa ───────────────────────────────────────────────────────────────────
+      const BASEMAPS = {
+        osm: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap",
+          maxZoom: 19,
+        }),
+        sat: L.tileLayer(
+          "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["0", "1", "2", "3"],
+            attribution: "© Google",
+            maxZoom: 20,
+          },
+        ),
+        hybrid: L.tileLayer(
+          "https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          {
+            subdomains: ["0", "1", "2", "3"],
+            attribution: "© Google",
+            maxZoom: 20,
+          },
+        ),
+        esri: L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          { attribution: "© Esri", maxZoom: 18 },
+        ),
+      };
+
+      const map = L.map("map", {
+        center: [-14.5, -51.5],
+        zoom: 5,
+        layers: [BASEMAPS.osm],
+      });
+
+      document
+        .getElementById("basemap-select")
+        .addEventListener("change", function () {
+          Object.values(BASEMAPS).forEach(
+            (l) => map.hasLayer(l) && map.removeLayer(l),
+          );
+          BASEMAPS[this.value].addTo(map);
+        });
+
+      drawnItems = new L.FeatureGroup().addTo(map);
+      const drawCtrl = new L.Control.Draw({
+        draw: {
+          rectangle: {
+            shapeOptions: { color: "#222", weight: 1.5, fillOpacity: 0.06 },
+          },
+          polygon: false,
+          polyline: false,
+          circle: false,
+          circlemarker: false,
+          marker: false,
+        },
+        edit: { featureGroup: drawnItems, remove: true },
+      });
+      map.addControl(drawCtrl);
+
+      map.on(L.Draw.Event.CREATED, function (e) {
+        drawnItems.clearLayers();
+        drawnItems.addLayer(e.layer);
+        const b = e.layer.getBounds();
+        currentBbox = [
+          +b.getWest().toFixed(4),
+          +b.getSouth().toFixed(4),
+          +b.getEast().toFixed(4),
+          +b.getNorth().toFixed(4),
+        ];
+        const bd = document.getElementById("bbox-display");
+        bd.textContent = `W ${currentBbox[0]}  S ${currentBbox[1]}  E ${currentBbox[2]}  N ${currentBbox[3]}`;
+        bd.classList.add("set");
+        document.getElementById("btn-gerar").disabled = false;
+      });
+      map.on(L.Draw.Event.DELETED, () => resetBbox());
+
+      document.getElementById("btn-limpar").addEventListener("click", () => {
+        drawnItems.clearLayers();
+        resetBbox();
+      });
+
+      function resetBbox() {
+        currentBbox = null;
+        const bd = document.getElementById("bbox-display");
+        bd.textContent = "Desenhe um retângulo no mapa";
+        bd.classList.remove("set");
+        document.getElementById("btn-gerar").disabled = true;
+      }
+
+      // ── Tooltip com delay (aparece só após 800ms parado) ───────────────────────
+      (function () {
+        const TIP_DELAY = 800; // ms parado antes de exibir
+        let _tipEl = null;
+        let _tipTimer = null;
+
+        function _ensureTip() {
+          if (_tipEl) return;
+          _tipEl = document.createElement("div");
+          _tipEl.id = "map-hover-tip";
+          _tipEl.style.cssText = [
+            "position:fixed",
+            "pointer-events:none",
+            "z-index:9999",
+            "background:#fff",
+            "border:1px solid #d0d0d0",
+            "border-radius:4px",
+            "padding:6px 10px",
+            "font-size:12px",
+            "line-height:1.5",
+            "box-shadow:0 2px 6px rgba(0,0,0,.15)",
+            "display:none",
+            "max-width:220px",
+            "white-space:normal",
+          ].join(";");
+          document.body.appendChild(_tipEl);
+        }
+
+        window._bindDelayedTooltip = function (layer, html) {
+          _ensureTip();
+          layer.on("mouseover", function (e) {
+            clearTimeout(_tipTimer);
+            _tipTimer = setTimeout(() => {
+              _tipEl.innerHTML = html;
+              _tipEl.style.display = "block";
+              _positionTip(e.originalEvent);
+            }, TIP_DELAY);
+          });
+          layer.on("mousemove", function (e) {
+            // Reinicia o timer sempre que o mouse se move dentro do polígono
+            clearTimeout(_tipTimer);
+            _tipEl.style.display = "none";
+            _tipTimer = setTimeout(() => {
+              _tipEl.innerHTML = html;
+              _tipEl.style.display = "block";
+              _positionTip(e.originalEvent);
+            }, TIP_DELAY);
+          });
+          layer.on("mouseout", function () {
+            clearTimeout(_tipTimer);
+            _tipEl.style.display = "none";
+          });
+        };
+
+        function _positionTip(ev) {
+          const W = window.innerWidth,
+            H = window.innerHeight;
+          const tw = _tipEl.offsetWidth || 220;
+          const th = _tipEl.offsetHeight || 60;
+          let x = ev.clientX + 14;
+          let y = ev.clientY + 14;
+          if (x + tw > W - 8) x = ev.clientX - tw - 10;
+          if (y + th > H - 8) y = ev.clientY - th - 10;
+          _tipEl.style.left = x + "px";
+          _tipEl.style.top = y + "px";
+        }
+      })();
+
+      // ── Grade FABDEM ───────────────────────────────────────────────────────────
+      let _fabdemLayer = null;
+
+      async function carregarGradeFabdem() {
+        const el = document.getElementById("fd-fabdem");
+        el.textContent = "carregando…";
+        try {
+          // cache:'no-store' garante dados frescos do servidor (ignora cache do browser)
+          const r = await fetch(`${API}/tiles/fabdem`, { cache: "no-store" });
+          if (!r.ok) {
+            el.textContent = `HTTP ${r.status}`;
+            return;
+          }
+          const data = await r.json();
+
+          // Remove layer anterior antes de redesenhar
+          if (_fabdemLayer) {
+            map.removeLayer(_fabdemLayer);
+            _fabdemLayer = null;
+          }
+
+          _fabdemLayer = L.geoJSON(
+            { type: "FeatureCollection", features: data.features },
+            {
+              style: (feat) => {
+                const dl = feat.properties.downloaded;
+                return dl
+                  ? {
+                      color: "#22aa55",
+                      weight: 0.8,
+                      opacity: 0.7,
+                      fillColor: "#22aa55",
+                      fillOpacity: 0.15,
+                    }
+                  : {
+                      color: "#cc3333",
+                      weight: 0.6,
+                      opacity: 0.5,
+                      fillColor: "#cc3333",
+                      fillOpacity: 0.04,
+                      dashArray: "3,3",
+                    };
+              },
+              onEachFeature: (feat, layer) => {
+                const p = feat.properties;
+                let estado;
+                if (p.tif_extraido) estado = "✔ TIF extraído localmente";
+                else if (p.bloco_presente) estado = "✔ ZIP do bloco disponível";
+                else estado = "✘ Não baixado — download automático ao gerar";
+                const html = `<b>FABDEM — ${p.codigo_fabdem}</b><br>${estado}<br><span style="color:#888">Bloco: ${p.bloco_zip_10x10 || "-"}</span>`;
+                _bindDelayedTooltip(layer, html);
+              },
+            },
+          ).addTo(map);
+
+          el.textContent = `${data.downloaded}/${data.total} tiles locais`;
+          el.className = "fonte-val" + (data.downloaded > 0 ? " ok" : " err");
+        } catch (e) {
+          console.warn("FABDEM tiles:", e);
+          el.textContent = `Erro: ${e.message}`;
+        }
+      }
+
+      document
+        .getElementById("btn-reload-fabdem")
+        .addEventListener("click", carregarGradeFabdem);
+
+      async function carregarCoberturaMapbiomas() {
+        try {
+          const r = await fetch(`${API}/tiles/mapbiomas`, {
+            cache: "no-store",
+          });
+          if (!r.ok) {
+            console.warn("MapBiomas tiles HTTP", r.status);
+            document.getElementById("fd-mapbiomas").textContent =
+              `HTTP ${r.status}`;
+            return;
+          }
+          const feat = await r.json();
+          const p = feat.properties || {};
+          const html = `<b>MapBiomas — ${p.nome || "Collection 10"}</b><br>✔ Arquivo local disponível<br><span style="color:#888">Resolução ${p.resolucao || "10m"} · Ano ${p.ano || 2023}</span>`;
+          const gjLayer = L.geoJSON(feat, {
+            style: {
+              color: "#2255aa",
+              weight: 1.2,
+              fillColor: "#2255aa",
+              fillOpacity: 0.06,
+              dashArray: "5,4",
+            },
+          });
+          gjLayer.eachLayer((l) => _bindDelayedTooltip(l, html));
+          gjLayer.addTo(map);
+        } catch (e) {
+          console.warn("MapBiomas tiles:", e);
+          document.getElementById("fd-mapbiomas").textContent =
+            `Erro: ${e.message}`;
+        }
+      }
+
+      // ── Status ─────────────────────────────────────────────────────────────────
+      async function atualizarStatus() {
+        try {
+          const s = await (await fetch(`${API}/status`)).json();
+          const badge = document.getElementById("sys-badge");
+          badge.textContent = `${s.sistema.backend}`;
+          badge.className = "ok";
+
+          const ativos = s.sistema.jobs_ativos || 0;
+          const max = s.sistema.max_concurrent || 4;
+          document.getElementById("workers-count").textContent =
+            `${ativos}/${max} ativos`;
+          const bar = document.getElementById("workers-bar");
+          bar.innerHTML = "";
+          for (let i = 0; i < max; i++) {
+            const d = document.createElement("div");
+            d.className = "ws" + (i < ativos ? " busy" : "");
+            bar.appendChild(d);
+          }
+
+          const rows = document.querySelectorAll("#fontes-status .fonte-row");
+          if (rows[1]) {
+            const ok = s.dados?.mapbiomas?.ativo;
+            const el = document.getElementById("fd-mapbiomas");
+            el.textContent = ok
+              ? `${s.dados.mapbiomas.tamanho_gb} GB local`
+              : "não encontrado";
+            el.className = "fonte-val" + (ok ? " ok" : " err");
+          }
+          if (rows[2]) {
+            document.getElementById("fd-sentinel").textContent = "nuvens < 20%";
+          }
+
+          document.querySelectorAll(".chip").forEach((chip) => {
+            const avail = s.camadas_disponiveis?.[chip.dataset.layer] ?? true;
+            chip.classList.toggle("disabled", !avail);
+            if (!avail) {
+              chip.classList.remove("active");
+              activeLayers.delete(chip.dataset.layer);
+            }
+          });
+        } catch (e) {
+          const b = document.getElementById("sys-badge");
+          b.textContent = `offline — ${e.message}`;
+          b.className = "err";
+          console.error("Status API:", e);
+        }
+      }
+
+      // ── Chips ──────────────────────────────────────────────────────────────────
+      function _syncImgFonteSel() {
+        const imgAtivo = activeLayers.has("img");
+        const sel = document.getElementById("img-fonte-sel");
+        sel.style.opacity = imgAtivo ? "1" : "0.35";
+        sel.style.pointerEvents = imgAtivo ? "" : "none";
+      }
+
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.addEventListener("click", function () {
+          if (this.classList.contains("disabled")) return;
+          const layer = this.dataset.layer;
+          if (activeLayers.has(layer)) {
+            activeLayers.delete(layer);
+            this.classList.remove("active");
+          } else {
+            activeLayers.add(layer);
+            this.classList.add("active");
+          }
+          _syncImgFonteSel();
+        });
+      });
+
+      // Mostra/esconde seletor de zoom OSM
+      document.querySelectorAll('input[name="img_fonte"]').forEach((r) => {
+        r.addEventListener("change", function () {
+          const zw = document.getElementById("osm-zoom-wrap");
+          zw.style.display = this.value === "osm" ? "flex" : "none";
+        });
+      });
+      _syncImgFonteSel();
+
+      // ── Log ────────────────────────────────────────────────────────────────────
+      function classForLine(l) {
+        if (/===|^\[inicio\]/i.test(l)) return "ls";
+        if (/CONCLUIDO|CONCLU[ÍI]DO|done/i.test(l)) return "lok";
+        if (/ERRO|error|✖/i.test(l)) return "lerr";
+        if (/warn/i.test(l)) return "lwarn";
+        return "lline";
+      }
+      function appendLog(el, lines) {
+        lines.forEach((l) => {
+          const d = document.createElement("div");
+          d.className = classForLine(l);
+          d.textContent = l;
+          el.appendChild(d);
+        });
+        el.scrollTop = el.scrollHeight;
+      }
+      function clearLog(el) {
+        el.innerHTML = "";
+      }
+
+      // ── Gerar por área ─────────────────────────────────────────────────────────
+      document
+        .getElementById("btn-gerar")
+        .addEventListener("click", async function () {
+          if (!currentBbox) return;
+          const layers = [...activeLayers];
+          if (!layers.length) {
+            alert("Selecione ao menos uma camada.");
+            return;
+          }
+
+          const logEl = document.getElementById("log");
+          clearLog(logEl);
+          // Limpa painel de downloads anterior
+          const panel = document.getElementById("download-panel");
+          panel.classList.remove("visible");
+          document.getElementById("dl-grid").innerHTML = "";
+          appendLog(logEl, ["Enviando pedido..."]);
+          this.disabled = true;
+          currentJobId = null;
+          lastLogLen = 0;
+
+          try {
+            const imgFonte =
+              document.querySelector('input[name="img_fonte"]:checked')
+                ?.value || "sentinel2";
+            const osmZoom = parseInt(
+              document.getElementById("osm-zoom")?.value || "15",
+              10,
+            );
+            const payload = {
+              bbox: currentBbox,
+              layers,
+              img_fonte: imgFonte,
+              osm_zoom: osmZoom,
+            };
+
+            const resp = await fetch(`${API}/jobs`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const job = await resp.json();
+            if (!resp.ok) {
+              appendLog(logEl, [`Erro: ${job.detail || resp.status}`]);
+              this.disabled = false;
+              return;
+            }
+            currentJobId = job.job_id;
+            const fonteLabel =
+              imgFonte === "osm" ? `OSM zoom ${osmZoom}` : "Sentinel-2";
+            appendLog(logEl, [
+              `Job ${job.job_id}`,
+              `Camadas: ${layers.join(", ")} | Imagem: ${fonteLabel}`,
+            ]);
+            if (job.status === "done") {
+              await mostrarDownload(logEl, job);
+              this.disabled = false;
+              return;
+            }
+            pollInterval = setInterval(
+              () =>
+                pollJob(job.job_id, logEl, () => {
+                  this.disabled = false;
+                }),
+              2000,
+            );
+          } catch (e) {
+            appendLog(logEl, [`Erro de rede: ${e.message}`]);
+            this.disabled = false;
+          }
+        });
+
+      async function pollJob(jobId, logEl, onDone) {
+        try {
+          const job = await (await fetch(`${API}/jobs/${jobId}`)).json();
+          const lines = job.progresso || [];
+          if (lines.length > lastLogLen) {
+            appendLog(logEl, lines.slice(lastLogLen));
+            lastLogLen = lines.length;
+          }
+          if (job.status === "done") {
+            clearInterval(pollInterval);
+            await mostrarDownload(logEl, job);
+            onDone();
+            atualizarJobs();
+          } else if (job.status === "error") {
+            clearInterval(pollInterval);
+            appendLog(logEl, [job.erro || "Erro desconhecido"]);
+            onDone();
+          }
+        } catch (e) {}
+      }
+
+      const EXT_LABELS = {
+        ".geo": { label: "FABDEM", desc: "Terreno 30m" },
+        ".sol": { label: "MapBiomas", desc: "Clutter 30m" },
+        ".pal": { label: "Paleta", desc: "Cores clutter" },
+        ".img": { label: "Sentinel-2", desc: "Imagem 15m" },
+        ".zip": { label: "Pacote ZIP", desc: "Todos os arquivos" },
+      };
+
+      async function mostrarDownload(logEl, job) {
+        const dur = job.duracao_s ? ` — ${job.duracao_s}s` : "";
+        appendLog(logEl, [`Concluído${dur}`]);
+
+        // Busca lista de arquivos gerados
+        try {
+          const r = await fetch(`${API}/jobs/${job.job_id}/files`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const { arquivos } = await r.json();
+
+          const panel = document.getElementById("download-panel");
+          const grid = document.getElementById("dl-grid");
+          grid.innerHTML = "";
+
+          arquivos.forEach((f) => {
+            const info = EXT_LABELS[f.extensao] || {
+              label: f.extensao,
+              desc: "",
+            };
+            const sz =
+              f.bytes < 1024 * 1024
+                ? `${(f.bytes / 1024).toFixed(0)} KB`
+                : `${(f.bytes / 1024 / 1024).toFixed(1)} MB`;
+
+            const item = document.createElement("div");
+            item.className = "dl-item";
+            item.innerHTML = `
+        <div class="dl-item-left">
+          <span class="dl-ext">${f.extensao === ".zip" ? "ZIP completo" : f.nome}</span>
+          <span class="dl-meta">${info.label} · ${info.desc} · ${sz}</span>
+        </div>
+        <a class="dl-btn${f.extensao === ".zip" ? " zip" : ""}" href="${API}${f.url}" download="${f.nome}">
+          Download
+        </a>
+      `;
+            grid.appendChild(item);
+          });
+
+          panel.classList.add("visible");
+          logEl.scrollTop = logEl.scrollHeight;
+        } catch (e) {
+          // Fallback: link único para o ZIP
+          const a = document.createElement("a");
+          a.href = `${API}/jobs/${job.job_id}/download`;
+          a.style =
+            "display:block;margin-top:6px;font-weight:700;color:#f0f0f0;";
+          a.textContent = "Baixar pacote HTZ";
+          logEl.appendChild(a);
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+      }
+
+      // ── Upload ─────────────────────────────────────────────────────────────────
+      const TIPO_HINTS = {
+        dem: "GeoTIFF de elevação. Float32 ou Int16, valores em metros. Ex: SRTM, ALOS, Copernicus DEM, FABDEM. Reprojetado automaticamente para 30m UTM.",
+        clutter:
+          "GeoTIFF de uso/cobertura do solo com classes inteiras por pixel. Compatível com MapBiomas (0–48) ou diretamente ATDI (0–9). Tabela de reclassificação padrão aplicada.",
+        img: "GeoTIFF de imagem óptica — RGB (3 bandas) ou grayscale (1 banda). Sentinel-2, CBERS, Landsat, ortofoto. Normalizado para 8-bit, reprojetado para 15m UTM.",
+      };
+
+      function selTipo(el) {
+        document
+          .querySelectorAll(".type-chip")
+          .forEach((c) => c.classList.remove("sel"));
+        el.classList.add("sel");
+        selectedTipo = el.dataset.tipo;
+        document.getElementById("tipo-hint").textContent =
+          TIPO_HINTS[selectedTipo];
+        const isClutter = selectedTipo === "clutter";
+        document.getElementById("onion-row").style.display = isClutter
+          ? "flex"
+          : "none";
+        document.getElementById("formato-clutter-row").style.display = isClutter
+          ? "block"
+          : "none";
+      }
+      document.getElementById("onion-row").style.display = "none";
+      document.getElementById("formato-clutter-row").style.display = "none";
+
+      // Highlight do radio selecionado
+      document
+        .querySelectorAll('input[name="fmt-clutter"]')
+        .forEach((radio) => {
+          radio.addEventListener("change", function () {
+            document.getElementById("fmt-mapbiomas-label").style.borderColor =
+              "";
+            document.getElementById("fmt-atdi-label").style.borderColor = "";
+            const lbl =
+              this.value === "mapbiomas"
+                ? "fmt-mapbiomas-label"
+                : "fmt-atdi-label";
+            document.getElementById(lbl).style.borderColor = "var(--text)";
+          });
+        });
+      // Estado inicial
+      document.getElementById("fmt-mapbiomas-label").style.borderColor =
+        "var(--text)";
+
+      function onFileSelect(input) {
+        if (input.files[0]) setFile(input.files[0]);
+      }
+      function onDrop(ev) {
+        ev.preventDefault();
+        document.getElementById("dropzone").classList.remove("over");
+        const f = ev.dataTransfer.files[0];
+        if (f && (f.name.endsWith(".tif") || f.name.endsWith(".tiff")))
+          setFile(f);
+        else alert("Apenas .tif / .tiff são aceitos.");
+      }
+      function setFile(f) {
+        selectedFile = f;
+        document.getElementById("file-info").textContent =
+          `${f.name} — ${(f.size / 1024 / 1024).toFixed(1)} MB`;
+        document.getElementById("btn-upload").disabled = false;
+      }
+
+      document
+        .getElementById("btn-upload")
+        .addEventListener("click", async function () {
+          if (!selectedFile) return;
+          this.disabled = true;
+          const logEl = document.getElementById("upload-log");
+          clearLog(logEl);
+          appendLog(logEl, [
+            `Enviando ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(1)} MB)...`,
+          ]);
+          lastUploadLogLen = 0;
+
+          const fmtClutter =
+            document.querySelector('input[name="fmt-clutter"]:checked')
+              ?.value || "mapbiomas";
+          const fd = new FormData();
+          fd.append("file", selectedFile);
+          fd.append("tipo", selectedTipo);
+          fd.append(
+            "aplicar_onion",
+            document.getElementById("cb-onion").checked ? "true" : "false",
+          );
+          if (selectedTipo === "clutter")
+            fd.append("formato_clutter", fmtClutter);
+
+          try {
+            const resp = await fetch(`${API}/convert`, {
+              method: "POST",
+              body: fd,
+            });
+            const job = await resp.json();
+            if (!resp.ok) {
+              appendLog(logEl, [`Erro: ${job.detail || resp.status}`]);
+              this.disabled = false;
+              return;
+            }
+            uploadJobId = job.job_id;
+            appendLog(logEl, [`Job ${job.job_id} · tipo: ${selectedTipo}`]);
+            uploadPoll = setInterval(
+              () =>
+                pollUpload(job.job_id, logEl, () => {
+                  this.disabled = false;
+                }),
+              2000,
+            );
+          } catch (e) {
+            appendLog(logEl, [`Erro de rede: ${e.message}`]);
+            this.disabled = false;
+          }
+        });
+
+      async function pollUpload(jobId, logEl, onDone) {
+        try {
+          const job = await (await fetch(`${API}/jobs/${jobId}`)).json();
+          const lines = job.progresso || [];
+          if (lines.length > lastUploadLogLen) {
+            appendLog(logEl, lines.slice(lastUploadLogLen));
+            lastUploadLogLen = lines.length;
+          }
+          if (job.status === "done") {
+            clearInterval(uploadPoll);
+            const sz = job.zip_bytes
+              ? `${(job.zip_bytes / 1024 / 1024).toFixed(1)} MB`
+              : "";
+            const dur = job.duracao_s ? ` — ${job.duracao_s}s` : "";
+            appendLog(logEl, [`Concluído${dur} · ${sz}`]);
+            const a = document.createElement("a");
+            a.href = `${API}/jobs/${jobId}/download`;
+            a.style =
+              "display:block;margin-top:6px;font-weight:700;color:#f0f0f0;";
+            a.textContent = `Baixar resultado ATDI (${sz})`;
+            logEl.appendChild(a);
+            logEl.scrollTop = logEl.scrollHeight;
+            onDone();
+            atualizarJobs();
+          } else if (job.status === "error") {
+            clearInterval(uploadPoll);
+            appendLog(logEl, [job.erro || "Erro desconhecido"]);
+            onDone();
+          }
+        } catch (e) {}
+      }
+
+      // ── Histórico ──────────────────────────────────────────────────────────────
+      async function atualizarJobs() {
+        try {
+          const jobs = await (await fetch(`${API}/jobs`)).json();
+          const el = document.getElementById("jobs-list");
+          el.innerHTML = "";
+          if (!jobs.length) {
+            el.innerHTML =
+              '<div style="color:var(--muted);font-size:11px">Nenhum job ainda.</div>';
+            return;
+          }
+          jobs
+            .slice()
+            .reverse()
+            .slice(0, 12)
+            .forEach((job) => {
+              const d = document.createElement("div");
+              d.className = "jcard";
+              const dur = job.duracao_s ? `${job.duracao_s}s` : "";
+              const sz = job.zip_bytes
+                ? `${(job.zip_bytes / 1024 / 1024).toFixed(1)} MB`
+                : "";
+              const meta = [dur, sz].filter(Boolean).join(" · ");
+              d.innerHTML = `
+        <div class="jcard-top">
+          <span class="jid">${job.job_id}</span>
+          <span class="jst ${job.status}">${job.status}</span>
+        </div>
+        ${meta ? `<div class="jmeta">${meta}</div>` : ""}
+        ${job.status === "done" ? `<a href="${API}/jobs/${job.job_id}/download">Download</a>` : ""}
+      `;
+              el.appendChild(d);
+            });
+        } catch (e) {}
+      }
+
+      // ── Ajuda ──────────────────────────────────────────────────────────────────
+      function abrirAjuda(tab) {
+        document.getElementById("help-overlay").classList.add("open");
+        if (tab) {
+          const btn = document.querySelector(
+            `#help-tabs .htab[onclick*="'${tab}'"]`,
+          );
+          mudarHelpTab(tab, btn);
+        }
+      }
+      function fecharAjuda() {
+        document.getElementById("help-overlay").classList.remove("open");
+      }
+      function mudarHelpTab(nome, btn) {
+        document
+          .querySelectorAll(".hpane")
+          .forEach((p) => (p.style.display = "none"));
+        document
+          .querySelectorAll(".htab")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("hp-" + nome).style.display = "block";
+        if (btn) btn.classList.add("active");
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") fecharAjuda();
+      });
+
+      // ── Init ───────────────────────────────────────────────────────────────────
+      (async function init() {
+        await atualizarStatus();
+        await Promise.all([
+          carregarGradeFabdem(),
+          carregarCoberturaMapbiomas(),
+          atualizarJobs(),
+        ]);
+        setInterval(atualizarStatus, 10000);
+        setInterval(atualizarJobs, 15000);
+      })();
+    </script>
+  </body>
+</html>

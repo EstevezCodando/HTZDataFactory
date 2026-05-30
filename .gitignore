@@ -1,0 +1,25 @@
+# Credenciais — NUNCA commitar
+.env
+
+# Saídas geradas
+saidas/
+dados/
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

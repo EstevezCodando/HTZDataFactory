@@ -1,0 +1,33 @@
+codigo_mapbiomas,nome_mapbiomas,codigo_atdi,nome_atdi,justificativa
+0,Sem dado,0,open,nodata — pixels sem informacao
+3,Formacao Florestal,5,forest,dossel fechado continuuo
+4,Formacao Savanica,8,wood,dossel aberto (Cerrado)
+5,Mangue,5,forest,dossel fechado denso
+6,Floresta Alagavel,5,forest,dossel fechado em varzea
+9,Silvicultura,5,forest,plantio de eucalipto/pinus — dossel fechado
+11,Campo Alagado e Area Pantanosa,6,hydro,superficie hidrica e vegetacao aquatica
+12,Formacao Campestre,0,open,campo aberto sem dossel
+15,Pastagem,0,open,gramado — atenuacao minima
+19,Lavoura Temporaria,0,open,solo exposto ou cultura rasteira
+20,Cana,8,wood,canavial com dossel ~5m
+21,Mosaico de Usos,8,wood,lavoura irrigada mosaico ~7dB (soja/milho)
+23,Praia Duna e Areal,0,open,superficie aberta sem vegetacao
+24,Area Urbanizada,2,urban_8m,base para efeito cebola — onion eleva interior
+25,Outras Areas nao Vegetadas,0,open,solo exposto
+27,Nao Observado,0,open,sem dado de cobertura
+29,Afloramento Rochoso,0,open,rocha nua
+30,Mineracao,0,open,area degradada sem cobertura
+31,Aquicultura,6,hydro,lamina dagua em tanques
+32,Apicum,0,open,planicie salina descoberta
+33,Rio Lago e Oceano,6,hydro,superficie hidrica
+35,Dende,5,forest,palmeira com dossel ~10m
+36,Lavoura Perene,8,wood,pomar/cafe/citrus — dossel ~4m
+39,Soja,0,open,cultura rasteira — atenuacao minima
+40,Arroz,0,open,cultura inundada rasteira
+41,Outras Lavouras Temporarias,0,open,cultura rasteira generica
+46,Cafe,8,wood,cafe arborizado — dossel ~3m
+47,Citrus,8,wood,pomar citrico — dossel ~4m
+48,Outras Lavouras Perenes,8,wood,pomar generico
+49,Restinga Arborea,8,wood,vegetacao litoranea arbustiva
+50,Restinga Herbacea,0,open,vegetacao litoranea rasteira
+62,Algodao,0,open,cultura rasteira
