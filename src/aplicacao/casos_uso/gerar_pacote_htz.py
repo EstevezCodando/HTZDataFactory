@@ -133,8 +133,8 @@ def executar(
             "bbox": list(bbox),
             "layers": layers,
             "fontes": {
-                "dem":     "FABDEM v1.2 (University of Bristol, CC-BY-4.0)",
-                "clutter": "MapBiomas Collection 10 (CC-BY-4.0)",
+                "dem":     "FABDEM v1.2 2022 (University of Bristol, CC-BY-4.0)",
+                "clutter": "MapBiomas Collection 10 2023 (CC-BY-4.0)",
                 "imagem":  (
                     f"OpenStreetMap zoom {osm_zoom} (ODbL)"
                     if img_fonte == "osm"
@@ -146,7 +146,7 @@ def executar(
             "meta_urbano":   meta_sol,
             "disclaimer": (
                 "Dados gerados automaticamente para uso em simulacoes de RF. "
-                "Validacao em campo e recomendada antes de uso operacional."
+                "Os dados são gerados com base nas fontes acima, analise dos dados é necessaria antes de uso operacional."
             ),
         }
         manifesto_path = job_dir / "manifesto.json"
