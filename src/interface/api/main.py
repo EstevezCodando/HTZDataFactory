@@ -616,7 +616,9 @@ def health():
 def tiles_fabdem():
     """
     GeoJSON com todas as células FABDEM indicando disponibilidade local.
-    Considera disponível tanto o TIF já extraído quanto o ZIP do bloco presente na pasta.
+    - TIFs encontrados recursivamente em todas as subpastas
+    - Blocos (pastas/ZIPs com padrão *_FABDEM_V1-2) detectados em qualquer nível
+    - Geometry construída a partir de lat/lon se o catálogo não a tiver
     """
     import json as _json
 
@@ -625,34 +627,34 @@ def tiles_fabdem():
 
     fabdem_dir = os.path.dirname(FABDEM_GEOJSON)
 
-    # ── Indexa TIFs já extraídos (busca recursiva) ────────────────────────────
-    local_tifs: set[str] = set()
+    # ── Scan recursivo único: TIFs + blocos (pastas e ZIPs) ───────────────────
+    local_tifs:   set[str] = set()
+    local_blocos: set[str] = set()
+
     for root, dirs, files in os.walk(fabdem_dir):
+        root_path = Path(root)
+        # Se o próprio diretório atual é uma pasta de bloco (ex: S20W060-S10W050_FABDEM_V1-2)
+        if "_FABDEM_V1-2" in root_path.name and root_path != Path(fabdem_dir):
+            bloco = root_path.name.split("_FABDEM_V1-2")[0]
+            local_blocos.add(bloco)
         for f in files:
             if f.endswith("_FABDEM_V1-2.tif"):
                 local_tifs.add(f.replace("_FABDEM_V1-2.tif", ""))
-
-    # ── Indexa ZIPs de blocos presentes na pasta raiz ─────────────────────────
-    # Ex: "S20W060-S10W050_FABDEM_V1-2.zip" ou pasta "S20W060-S10W050_FABDEM_V1-2"
-    # O nome do bloco é o prefixo antes de "_FABDEM_V1-2"
-    local_blocos: set[str] = set()
-    for entry in Path(fabdem_dir).iterdir():
-        nome = entry.name
-        if "_FABDEM_V1-2" in nome:
-            bloco = nome.split("_FABDEM_V1-2")[0]   # ex: "S20W060-S10W050"
-            local_blocos.add(bloco)
+            elif f.endswith("_FABDEM_V1-2.zip"):
+                local_blocos.add(f.replace("_FABDEM_V1-2.zip", ""))
 
     with open(FABDEM_GEOJSON, encoding="utf-8") as f:
         fc = _json.load(f)
 
-    disponiveis = 0
+    features_out = []
+    disponiveis  = 0
     for feat in fc.get("features", []):
         p      = feat.get("properties", {})
         codigo = p.get("codigo_fabdem", "")
         bloco  = p.get("bloco_zip_10x10", "")
 
         tif_ok   = codigo in local_tifs
-        bloco_ok = bloco in local_blocos
+        bloco_ok = bloco  in local_blocos
 
         p["downloaded"]     = tif_ok or bloco_ok
         p["tif_extraido"]   = tif_ok
@@ -660,11 +662,36 @@ def tiles_fabdem():
         if p["downloaded"]:
             disponiveis += 1
 
+        # ── Garante que a feature tem geometry ──────────────────────────────
+        # Alguns catálogos FABDEM distribuem apenas propriedades, sem geometry.
+        # Reconstruímos o polígono a partir dos campos de bbox.
+        geom = feat.get("geometry")
+        if not geom:
+            lat0 = p.get("lat_min", p.get("lat0"))
+            lat1 = p.get("lat_max", p.get("lat1"))
+            lon0 = p.get("lon_min", p.get("lon0"))
+            lon1 = p.get("lon_max", p.get("lon1"))
+            if None not in (lat0, lat1, lon0, lon1):
+                geom = {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [lon0, lat0], [lon1, lat0],
+                        [lon1, lat1], [lon0, lat1],
+                        [lon0, lat0],
+                    ]],
+                }
+
+        features_out.append({
+            "type":       "Feature",
+            "geometry":   geom,
+            "properties": p,
+        })
+
     return {
         "type":       "FeatureCollection",
-        "total":      len(fc.get("features", [])),
+        "total":      len(features_out),
         "downloaded": disponiveis,
-        "features":   fc.get("features", []),
+        "features":   features_out,
     }
 
 

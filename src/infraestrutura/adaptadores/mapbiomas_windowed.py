@@ -21,9 +21,8 @@ from src.dominio.processamento.servicos import (
     reclassifica_clutter,
     aplica_onion,
     stats_urbanos,
-    PALETTE_FLAT,
 )
-from src.infraestrutura.adaptadores.atdi_writer import write_sol, write_pal, _utm_epsg
+from src.infraestrutura.adaptadores.atdi_writer import write_sol, _utm_epsg
 
 WGS84_CRS    = CRS.from_epsg(4326)
 PIXEL_SIZE_M = 30.0   # metros
@@ -260,7 +259,6 @@ def process(bbox: tuple, output_dir: str,
     base_name = f"{lat_i:02d}{ns}{lon_i:03d}{ew}"
 
     sol_path = os.path.join(output_dir, base_name + ".sol")
-    pal_path = os.path.join(output_dir, base_name + ".pal")
 
     if progress_cb:
         progress_cb(f"[MapBiomas] Escrevendo {base_name}.sol ...")
@@ -274,13 +272,11 @@ def process(bbox: tuple, output_dir: str,
         lon_center=lon_center,
         south=is_south,
     )
-    write_pal(pal_path, PALETTE_FLAT)
 
     if progress_cb:
         sz_sol = os.path.getsize(sol_path)
         unique = np.unique(clutter[clutter > 0])
         progress_cb(f"[MapBiomas] SOL gerado: {sz_sol/1024:.0f} KB, "
                     f"{len(unique)} classes ATDI")
-        progress_cb(f"[MapBiomas] PAL gerado: {base_name}.pal")
 
-    return sol_path, pal_path, stats_urbanos(clutter)
+    return sol_path, stats_urbanos(clutter)

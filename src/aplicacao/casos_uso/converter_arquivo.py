@@ -3,11 +3,13 @@ Caso de Uso: Converter arquivo raster enviado pelo usuário para formato ATDI.
 
 Suporta:
   tipo=dem    → GeoTIFF de elevação (qualquer projeção) → .geo
-  tipo=clutter→ GeoTIFF de classes de uso do solo      → .sol + .pal
-  tipo=img    → GeoTIFF RGB ou banda única              → .img
+  tipo=clutter→ GeoTIFF de classes de uso do solo      → .sol
+  tipo=img    → GeoTIFF RGB ou banda única              → .img + .pal
 
 O arquivo é reprojetado automaticamente para UTM e gravado no formato
 binário ATDI nativo (header 1010 bytes + dados brutos).
+
+Nota: .sol (clutter) não usa .pal — a paleta de cores é exclusiva do .img.
 """
 
 import math
@@ -24,10 +26,9 @@ from src.dominio.processamento.servicos import (
     carregar_tabela_reclassificacao,
     reclassifica_clutter,
     aplica_onion,
-    PALETTE_FLAT,
 )
 from src.infraestrutura.adaptadores.atdi_writer import (
-    write_geo, write_sol, write_pal, write_img, _utm_epsg,
+    write_geo, write_sol, write_img, write_pal_grayscale, _utm_epsg,
 )
 
 WGS84 = CRS.from_epsg(4326)
@@ -235,15 +236,13 @@ def converter_clutter(tif_path: str, output_dir: str,
     ew = "W" if bbox[0] < 0 else "E"
     base  = f"{lat_i:02d}{ns}{lon_i:03d}{ew}"
     sol   = os.path.join(output_dir, base + ".sol")
-    pal   = os.path.join(output_dir, base + ".pal")
 
     write_sol(sol, clutter, xmin, ymin, PIXEL_GEO, lon_c, is_s)
-    write_pal(pal, PALETTE_FLAT)
     sz = os.path.getsize(sol)
     unique = np.unique(clutter[clutter > 0])
     if progress_cb: progress_cb(f"[Clutter] ✓ {base}.sol gerado — {sz/1024:.0f} KB "
                                  f"| {len(unique)} classes ATDI")
-    return [sol, pal]
+    return [sol]
 
 
 def converter_img(tif_path: str, output_dir: str,
@@ -307,10 +306,13 @@ def converter_img(tif_path: str, output_dir: str,
     fname = f"{lat_i:02d}{ns}{lon_i:03d}{ew}.img"
     out   = os.path.join(output_dir, fname)
 
+    pal_fname = fname.replace(".img", ".pal")
+    pal_out   = os.path.join(output_dir, pal_fname)
     write_img(out, dst, xmin, ymin, PIXEL_IMG, lon_c, is_s)
+    write_pal_grayscale(pal_out)
     sz = os.path.getsize(out)
-    if progress_cb: progress_cb(f"[IMG] ✓ {fname} gerado — {sz/1024:.0f} KB")
-    return [out]
+    if progress_cb: progress_cb(f"[IMG] ✓ {fname} gerado — {sz/1024:.0f} KB | {pal_fname} gerado")
+    return [out, pal_out]
 
 
 # ──────────────────────────────────────────────────────────────────────────────

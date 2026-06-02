@@ -27,7 +27,7 @@ from rasterio.crs import CRS
 from rasterio.transform import from_bounds
 from rasterio.warp import reproject, Resampling, calculate_default_transform
 
-from src.infraestrutura.adaptadores.atdi_writer import write_img, _utm_epsg
+from src.infraestrutura.adaptadores.atdi_writer import write_img, write_pal_grayscale, _utm_epsg
 
 # ── Constantes ────────────────────────────────────────────────────────────────
 TILE_SIZE   = 256          # pixels por tile OSM
@@ -266,8 +266,12 @@ def process(bbox: tuple, output_dir: str,
         south=is_south,
     )
 
+    pal_path = img_path.replace(".img", ".pal")
+    write_pal_grayscale(pal_path)
+
     if progress_cb:
         sz = os.path.getsize(img_path)
         progress_cb(f"[OSM] IMG gerado: {sz/1024:.0f} KB")
+        progress_cb(f"[OSM] PAL grayscale gerado: {base_name}.pal")
 
-    return img_path
+    return img_path, pal_path

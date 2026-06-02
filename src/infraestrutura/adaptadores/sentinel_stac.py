@@ -13,7 +13,7 @@ from rasterio.warp import reproject, Resampling, calculate_default_transform, tr
 from rasterio.transform import from_bounds as tfrom_bounds
 from rasterio.io import MemoryFile
 
-from src.infraestrutura.adaptadores.atdi_writer import write_img, _utm_epsg
+from src.infraestrutura.adaptadores.atdi_writer import write_img, write_pal_grayscale, _utm_epsg
 
 WGS84_CRS    = CRS.from_epsg(4326)
 PIXEL_SIZE_M = 15.0   # .img ATDI usa metade do pixel do .sol/.geo
@@ -216,10 +216,14 @@ def process(bbox: tuple, output_dir: str,
         south=is_south,
     )
 
+    pal_path = out_path.replace(".img", ".pal")
+    write_pal_grayscale(pal_path)
+
     if progress_cb:
         sz = os.path.getsize(out_path)
         valid = img_8bit[img_8bit > 0]
         rng = f"{valid.min()}-{valid.max()}" if len(valid) else "sem pixels"
         progress_cb(f"[Sentinel-2] IMG gerado: {sz/1024:.0f} KB | range {rng}")
+        progress_cb(f"[Sentinel-2] PAL grayscale gerado: {filename.replace('.img', '.pal')}")
 
-    return out_path, {"cena_id": item.id, "data": dt, "nuvens_pct": cc}
+    return out_path, pal_path, {"cena_id": item.id, "data": dt, "nuvens_pct": cc}

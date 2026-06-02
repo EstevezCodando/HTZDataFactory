@@ -84,41 +84,43 @@ def executar(
             _log.info("FABDEM gerado", extra={"job_id": job_id, "bytes": sz,
                        "width": grade["width"], "height": grade["height"]})
 
-        # ── 2. MapBiomas → .sol + .pal ────────────────────────────────────
+        # ── 2. MapBiomas → .sol ───────────────────────────────────────────
+        # Nota: .sol não usa .pal — paleta de cores é exclusiva do .img
         if "sol" in layers:
             _cb("=== [2/3] Gerando clutter .sol (MapBiomas) ===")
-            sol_path, pal_path, urban_stats = mapbiomas_windowed.process(
+            sol_path, urban_stats = mapbiomas_windowed.process(
                 bbox=bbox, output_dir=str(job_dir),
                 mapbiomas_tif=mapbiomas_tif,
                 reclassificacao_csv=reclassificacao_csv,
                 progress_cb=_cb,
             )
-            arquivos_gerados += [sol_path, pal_path]
+            arquivos_gerados.append(sol_path)
             meta_sol = urban_stats
             sz = os.path.getsize(sol_path)
             log_evento("mapbiomas", arquivo=Path(sol_path).name, bytes=sz, **urban_stats)
             _log.info("MapBiomas gerado", extra={"job_id": job_id, "bytes": sz, **urban_stats})
 
-        # ── 3. Imagem → .img (Sentinel-2 ou OSM) ─────────────────────────
+        # ── 3. Imagem → .img + .pal (Sentinel-2 ou OSM) ─────────────────
+        # .pal é exclusivo do .img — gerado sempre que .img for solicitado
         if "img" in layers:
             if img_fonte == "osm":
                 _cb(f"=== [3/3] Gerando imagem .img (OpenStreetMap zoom {osm_zoom}) ===")
-                img_path = osm_tiles.process(
+                img_path, img_pal_path = osm_tiles.process(
                     bbox=bbox, output_dir=str(job_dir),
                     zoom=osm_zoom, grade=grade, progress_cb=_cb,
                 )
-                arquivos_gerados.append(img_path)
+                arquivos_gerados += [img_path, img_pal_path]
                 sz = os.path.getsize(img_path)
                 log_evento("osm_img", arquivo=Path(img_path).name, bytes=sz, zoom=osm_zoom)
                 _log.info("OSM IMG gerado", extra={"job_id": job_id, "bytes": sz, "zoom": osm_zoom})
                 meta_sentinel = {"fonte": "osm", "zoom": osm_zoom}
             else:
                 _cb("=== [3/3] Gerando imagem .img (Sentinel-2) ===")
-                img_path, meta_sentinel = sentinel_stac.process(
+                img_path, img_pal_path, meta_sentinel = sentinel_stac.process(
                     bbox=bbox, output_dir=str(job_dir),
                     grade=grade, progress_cb=_cb,
                 )
-                arquivos_gerados.append(img_path)
+                arquivos_gerados += [img_path, img_pal_path]
                 sz = os.path.getsize(img_path)
                 log_evento("sentinel2", arquivo=Path(img_path).name, bytes=sz, **meta_sentinel)
                 _log.info("Sentinel-2 gerado", extra={"job_id": job_id, "bytes": sz, **meta_sentinel})

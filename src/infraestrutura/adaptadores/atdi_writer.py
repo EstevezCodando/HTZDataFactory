@@ -169,31 +169,50 @@ def write_blg(path: str, data: np.ndarray,
         f.write(data.astype(np.uint8).tobytes())
 
 
+def _pal_field(value: int) -> bytes:
+    """
+    10 bytes por canal no formato ATDI (referencia: 06S035W.pal — area de Natal).
+    Formato: str(valor).encode('ascii') + b'\\x00' * (10 - len(str(valor)))
+    Exemplos:
+      valor 0   → b'0\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00'
+      valor 31  → b'31\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00'
+      valor 240 → b'240\\x00\\x00\\x00\\x00\\x00\\x00\\x00'
+    """
+    s = str(max(0, min(255, value)))
+    return s.encode('ascii') + b'\x00' * (10 - len(s))
+
+
 def write_pal(path: str, palette_flat: list):
     """
     Escreve .pal ATDI (7200 bytes = 240 entradas x 30 bytes).
     palette_flat: lista de 768 ints (256 entradas RGB, como PIL putpalette).
     Usa apenas entradas 0-239.
     """
-    def _pal_field(value: int, is_background: bool = False) -> bytes:
-        """10 bytes: valor + padding + sufixo 'el 1\\x00\\x00' (entrada 0 usa 'ssel 1\\x00\\x00')."""
-        if is_background:
-            return b'0\x00ssel 1\x00\x00'
-        s = str(value)
-        pad = b'\x00' * (4 - len(s))
-        return s.encode('ascii') + pad + b'el 1\x00\x00'
-
     buf = bytearray()
     for i in range(240):
         r = palette_flat[i * 3]
         g = palette_flat[i * 3 + 1]
         b = palette_flat[i * 3 + 2]
-        bg = (i == 0)
-        buf += _pal_field(r, bg)
-        buf += _pal_field(g, bg)
-        buf += _pal_field(b, bg)
+        buf += _pal_field(r)
+        buf += _pal_field(g)
+        buf += _pal_field(b)
 
     assert len(buf) == 7200, f"PAL size={len(buf)}, expected 7200"
+    with open(path, 'wb') as f:
+        f.write(buf)
+
+
+def write_pal_grayscale(path: str):
+    """
+    Escreve .pal ATDI com rampa de cinza linear para uso com .img.
+    Entradas 0-239: R=G=B=i  (0 = nodata/preto, 239 = quase branco).
+    Gerado quando .img e solicitado sem .sol no mesmo job.
+    """
+    buf = bytearray()
+    for i in range(240):
+        field = _pal_field(i)
+        buf += field + field + field   # R, G, B identicos → cinza
+    assert len(buf) == 7200, f"PAL grayscale size={len(buf)}, expected 7200"
     with open(path, 'wb') as f:
         f.write(buf)
 
