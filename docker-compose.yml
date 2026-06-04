@@ -91,6 +91,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend:/usr/share/nginx/frontend:ro
+      - ./docs:/usr/share/nginx/docs:ro
     depends_on:
       - api
     restart: unless-stopped

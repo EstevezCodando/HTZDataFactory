@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HTZDataFactory — Documentação Técnica</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #161b22;
+    --surface2: #1e2530;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --sidebar-w: 270px;
+    --header-h: 52px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  /* ── TOP BAR ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    height: var(--header-h); background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; padding: 0 20px;
+  }
+  header .logo { font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  header .tagline { font-size: 12px; color: var(--text2); }
+  header .version { margin-left: auto; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; color: var(--accent2); }
+
+  /* ── SIDEBAR ── */
+  nav#sidebar {
+    position: fixed; top: var(--header-h); left: 0; bottom: 0; width: var(--sidebar-w);
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 16px 0;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  nav#sidebar::-webkit-scrollbar { width: 4px; }
+  nav#sidebar::-webkit-scrollbar-track { background: transparent; }
+  nav#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .nav-section { padding: 6px 16px 2px; font-size: 10px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+  nav a {
+    display: block; padding: 5px 20px; font-size: 13px; color: var(--text2);
+    text-decoration: none; border-left: 2px solid transparent;
+    transition: all .15s;
+  }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,.08); }
+  nav a.sub { padding-left: 32px; font-size: 12px; }
+
+  /* ── MAIN ── */
+  main { margin-left: var(--sidebar-w); margin-top: var(--header-h); padding: 40px 48px; max-width: 1100px; }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 64px; scroll-margin-top: calc(var(--header-h) + 16px); }
+  h1 { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 20px; font-weight: 600; color: var(--accent); margin: 36px 0 14px; padding-left: 10px; border-left: 3px solid var(--accent); }
+  h3 { font-size: 16px; font-weight: 600; color: var(--accent4); margin: 24px 0 10px; }
+  h4 { font-size: 14px; font-weight: 600; color: var(--text2); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+  p  { color: var(--text2); margin-bottom: 12px; }
+  .lead { font-size: 16px; color: var(--text); margin-bottom: 24px; }
+
+  /* ── CODE / PRE ── */
+  code { font-family: "Fira Code", "Cascadia Code", "Consolas", monospace; font-size: 13px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--accent2); }
+  pre  { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; overflow-x: auto; margin: 12px 0 20px; font-size: 13px; line-height: 1.6; }
+  pre code { background: none; border: none; padding: 0; color: var(--text); }
+
+  /* ── TABLES ── */
+  .table-wrap { overflow-x: auto; margin: 14px 0 24px; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--surface2); color: var(--text2); font-weight: 600; text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 14px; border-bottom: 1px solid #1e252e; vertical-align: top; color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.025); }
+  td code { font-size: 12px; }
+
+  /* ── BADGES ── */
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  .badge-get    { background: #0d4a6b; color: #58a6ff; }
+  .badge-post   { background: #1a4a1a; color: #3fb950; }
+  .badge-delete { background: #4a1515; color: #f78166; }
+  .badge-put    { background: #4a3a00; color: #e3b341; }
+
+  /* ── CALLOUT ── */
+  .callout { border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 16px 0; font-size: 14px; }
+  .callout-info  { border-color: var(--accent);  background: rgba(88,166,255,.08); color: var(--text); }
+  .callout-warn  { border-color: #e3b341;         background: rgba(227,179,65,.08); color: var(--text); }
+  .callout-green { border-color: var(--accent2);  background: rgba(63,185,80,.08); color: var(--text); }
+  .callout strong { display: block; margin-bottom: 4px; }
+
+  /* ── MERMAID WRAPPER ── */
+  .mermaid-wrap {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; margin: 16px 0 28px;
+    overflow-x: auto; text-align: center;
+  }
+  .mermaid-wrap .mermaid { display: inline-block; }
+
+  /* ── GRID ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
+  .card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .card h4 { margin-top: 0; color: var(--accent); font-size: 13px; }
+  .card p { font-size: 13px; margin-bottom: 0; }
+
+  /* ── FILE TREE ── */
+  .filetree { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; font-family: monospace; font-size: 13px; line-height: 1.8; overflow-x: auto; }
+  .ft-dir  { color: var(--accent); }
+  .ft-file { color: var(--text); }
+  .ft-comment { color: var(--text2); }
+
+  /* ── ATDI FORMAT ── */
+  .offset-table td:first-child { font-family: monospace; color: var(--accent2); white-space: nowrap; }
+  .offset-table td:nth-child(2) { font-family: monospace; color: var(--accent4); }
+
+  @media (max-width: 900px) {
+    nav#sidebar { display: none; }
+    main { margin-left: 0; padding: 20px 16px; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header>
+  <div class="logo">HTZDataFactory</div>
+  <div class="tagline">Gerador de dados ATDI binários para HTZ Warfare / ICS Telecom</div>
+  <div class="version">v1.3.0 · 2026</div>
+</header>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="nav-section">Introdução</div>
+  <a href="#visao-geral">Visão Geral</a>
+  <a href="#stack">Stack Tecnológica</a>
+
+  <div class="nav-section">Arquitetura</div>
+  <a href="#contexto">Diagrama de Contexto (C4-L1)</a>
+  <a href="#containers">Diagrama de Containers (C4-L2)</a>
+  <a href="#ddd">Camadas DDD</a>
+  <a href="#estrutura">Estrutura de Arquivos</a>
+
+  <div class="nav-section">Domínio</div>
+  <a href="#diagrama-classes">Diagrama de Classes</a>
+  <a href="#entidades">Entidades</a>
+  <a href="#servicos-dominio">Serviços de Domínio</a>
+
+  <div class="nav-section">Comportamento</div>
+  <a href="#casos-uso">Diagrama de Casos de Uso</a>
+  <a href="#seq-gerar">Seq: Gerar Pacote HTZ</a>
+  <a href="#seq-preview">Seq: Preview de Tiles</a>
+  <a href="#seq-fabdem">Seq: Download FABDEM</a>
+  <a href="#seq-convert">Seq: Converter GeoTIFF</a>
+
+  <div class="nav-section">Infraestrutura</div>
+  <a href="#adaptadores">Adaptadores</a>
+  <a href="#atdi-format">Formato Binário ATDI</a>
+  <a href="#pal-format">Formato .pal</a>
+  <a href="#mbtiles">MBTiles (Preview)</a>
+
+  <div class="nav-section">API</div>
+  <a href="#api-jobs">Endpoints /jobs</a>
+  <a href="#api-img">Endpoints /img/preview</a>
+  <a href="#api-tiles">Endpoints /tiles</a>
+  <a href="#api-outros">Outros Endpoints</a>
+
+  <div class="nav-section">Configuração</div>
+  <a href="#env-vars">Variáveis de Ambiente</a>
+  <a href="#docker">Docker Compose</a>
+  <a href="#nginx">Nginx</a>
+  <a href="#mapbiomas-csv">Tabela MapBiomas→ATDI</a>
+
+  <div class="nav-section">Procedimentos</div>
+  <a href="#deploy">Deploy</a>
+  <a href="#engrev">Engenharia Reversa ATDI</a>
+  <a href="#troubleshoot">Troubleshooting</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="visao-geral">
+<h1>HTZDataFactory</h1>
+<p class="lead">Sistema Docker + DDD para geração automática de arquivos binários nativos ATDI (<code>.geo</code>, <code>.sol</code>, <code>.img</code>, <code>.pal</code>) para HTZ Warfare e ICS Telecom a partir de dados abertos — FABDEM, MapBiomas e imagens de satélite.</p>
+
+<div class="grid2">
+  <div class="card">
+    <h4>🛰 Fontes de Dados</h4>
+    <p><strong>DEM:</strong> FABDEM v1.2 (University of Bristol, CC-BY-4.0)<br>
+    <strong>Clutter:</strong> MapBiomas Collection 10 2023 (CC-BY-4.0)<br>
+    <strong>Imagem:</strong> Sentinel-2 L2A (ESA), Google Satellite, Bing Satellite, OSM</p>
+  </div>
+  <div class="card">
+    <h4>📦 Saídas ATDI</h4>
+    <p><code>.geo</code> — Elevação int16 LE, 30 m/px<br>
+    <code>.sol</code> — Clutter uint8, 30 m/px<br>
+    <code>.img</code> — Imagem uint8, 15 m/px<br>
+    <code>.pal</code> — Paleta 240 entradas × 30 bytes</p>
+  </div>
+  <div class="card">
+    <h4>⚡ Características</h4>
+    <p>Jobs assíncronos via Celery + Redis<br>
+    Preview interativo de tiles no mapa<br>
+    Download FABDEM por demanda<br>
+    Efeito cebola urbano automático</p>
+  </div>
+  <div class="card">
+    <h4>🔒 Segurança</h4>
+    <p>CORS restrito a origens locais<br>
+    Rate limiting por endpoint<br>
+    Validação de magic bytes em uploads<br>
+    Path traversal bloqueado</p>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="stack">
+<h1>Stack Tecnológica</h1>
+<div class="table-wrap">
+<table>
+<tr><th>Camada</th><th>Tecnologia</th><th>Versão</th><th>Uso</th></tr>
+<tr><td>Backend API</td><td>FastAPI + Uvicorn</td><td>0.110+</td><td>REST API, endpoints, validação Pydantic</td></tr>
+<tr><td>Workers</td><td>Celery + prefork</td><td>5.x</td><td>Jobs assíncronos, isolamento por processo</td></tr>
+<tr><td>Broker</td><td>Redis</td><td>7-alpine</td><td>Fila de tarefas + result backend</td></tr>
+<tr><td>Geoespacial</td><td>Rasterio + GDAL</td><td>1.3+</td><td>Leitura/reprojeção rasters, windows GDAL</td></tr>
+<tr><td>Numérico</td><td>NumPy</td><td>1.26+</td><td>Arrays raster, operações de erosão, clutter</td></tr>
+<tr><td>Imagem</td><td>Pillow</td><td>10+</td><td>Mosaico de tiles, conversão grayscale</td></tr>
+<tr><td>STAC</td><td>pystac-client + planetary-computer</td><td>—</td><td>Busca Sentinel-2 via Planetary Computer</td></tr>
+<tr><td>Tiles</td><td>sqlite3 (built-in)</td><td>Python</td><td>MBTiles para preview de imagens</td></tr>
+<tr><td>Proxy</td><td>Nginx</td><td>1.27-alpine</td><td>Rate limit, headers de segurança, static files</td></tr>
+<tr><td>Frontend</td><td>Leaflet.js</td><td>1.9</td><td>Mapa interativo, desenho de área, preview</td></tr>
+<tr><td>Monitor</td><td>Flower</td><td>2.0</td><td>Dashboard de workers Celery</td></tr>
+<tr><td>Orquestração</td><td>Docker Compose</td><td>3.9</td><td>5 serviços: api, worker, redis, nginx, flower</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="contexto">
+<h1>Diagrama de Contexto (C4 — Level 1)</h1>
+<p class="lead">Visão de alto nível: quem usa o sistema e com quais sistemas externos ele se comunica.</p>
+<div class="mermaid-wrap">
+<div class="mermaid">
+C4Context
+  title HTZDataFactory — Contexto do Sistema
+
+  Person(engenheiro, "Engenheiro de RF", "Planeja cobertura de redes de rádio")
+
+  System(htz, "HTZDataFactory", "Gera arquivos ATDI binários (.geo .sol .img .pal) para HTZ/ICS Telecom a partir de dados abertos")
+
+  System_Ext(htz_sw, "HTZ Warfare / ICS Telecom", "Software de planejamento de RF que consome os arquivos ATDI")
+  System_Ext(fabdem, "FABDEM (Bristol)", "Modelo digital de terreno 30m — download por demanda via HTTPS")
+  System_Ext(mapbiomas, "MapBiomas Collection 10", "Mapa de cobertura do solo do Brasil (arquivo local ~5.5 GB)")
+  System_Ext(sentinel, "Planetary Computer (STAC)", "Busca e download de cenas Sentinel-2 L2A via API pública")
+  System_Ext(google, "Google Satellite / Bing / OSM", "Tiles de imagem de satélite para preview e geração de .img")
+
+  Rel(engenheiro, htz, "Seleciona área, fonte, layers via browser")
+  Rel(htz, engenheiro, "Entrega ZIP com arquivos ATDI prontos")
+  Rel(engenheiro, htz_sw, "Importa arquivos ATDI para simulação")
+  Rel(htz, fabdem, "Download ZIP de tiles por demanda")
+  Rel(htz, mapbiomas, "Leitura janelada do TIF local")
+  Rel(htz, sentinel, "Busca e download de bandas RGB")
+  Rel(htz, google, "Download de tiles para preview e .img")
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="containers">
+<h1>Diagrama de Containers (C4 — Level 2)</h1>
+<p class="lead">Os 5 containers Docker e suas responsabilidades.</p>
+<div class="mermaid-wrap">
+<div class="mermaid">
+C4Container
+  title HTZDataFactory — Containers
+
+  Person(user, "Engenheiro de RF")
+
+  Container(nginx, "Nginx", "nginx:1.27-alpine", "Proxy reverso, rate limiting, headers de segurança, serve frontend estático")
+  Container(api, "API FastAPI", "Python 3.11 + Uvicorn", "REST API: recebe jobs, gerencia previews, serve status e arquivos")
+  Container(worker, "Celery Worker", "Python 3.11 + prefork", "Executa o pipeline de geração ATDI em processos isolados")
+  Container(redis, "Redis", "redis:7-alpine", "Broker de tarefas Celery + result backend (TTL 1 dia)")
+  Container(flower, "Flower", "mher/flower:2.0", "Dashboard de monitoramento de workers e tarefas")
+
+  ContainerDb(fabdem_vol, "Volume FABDEM", "Host bind-mount :ro", "GeoJSON catálogo + tiles .tif")
+  ContainerDb(mapbiomas_vol, "Volume MapBiomas", "Host bind-mount :ro", "TIF de cobertura do solo ~5.5 GB")
+  ContainerDb(saidas_vol, "Volume Saídas", "Host bind-mount :rw", "Jobs ZIP + previews MBTiles + auditoria JSONL")
+
+  Rel(user, nginx, "HTTP :8080", "HTTPS local")
+  Rel(nginx, api, "proxy_pass :8000", "HTTP interno")
+  Rel(api, redis, "enfileira tarefas", "TCP :6379")
+  Rel(worker, redis, "consome tarefas", "TCP :6379")
+  Rel(api, fabdem_vol, "lê catálogo GeoJSON")
+  Rel(worker, fabdem_vol, "lê TIFs")
+  Rel(worker, mapbiomas_vol, "leitura janelada GDAL")
+  Rel(worker, saidas_vol, "escreve .geo .sol .img .pal ZIP")
+  Rel(api, saidas_vol, "serve downloads + previews MBTiles")
+  Rel(flower, redis, "monitora workers")
+  Rel(user, flower, "HTTPS :5555 (localhost)", "dashboard")
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="ddd">
+<h1>Camadas DDD / Clean Architecture</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph TB
+  subgraph Interface["🌐 Interface"]
+    direction LR
+    API["API FastAPI\nmain.py · schemas.py"]
+    Worker["Worker Celery\ntasks.py · celery_app.py"]
+    Frontend["Frontend Leaflet\nindex.html"]
+  end
+
+  subgraph Aplicacao["📋 Aplicação (Casos de Uso)"]
+    direction LR
+    GerarPacote["gerar_pacote_htz.py\nOrquestra pipeline completo"]
+    ConverterArq["converter_arquivo.py\nConverte GeoTIFF customizado"]
+  end
+
+  subgraph Dominio["🧠 Domínio"]
+    direction LR
+    EntArea["AreaInteresse\nbbox · job_id · layers"]
+    EntCat["CelulaFABDEM\nTileMapBiomas"]
+    EntAud["Evento\nauditoria JSONL"]
+    Servicos["Serviços\nreclassifica_clutter()\naplica_onion()\nstats_urbanos()"]
+  end
+
+  subgraph Infra["⚙️ Infraestrutura (Adaptadores)"]
+    direction LR
+    FA["fabdem_rasterio\ndownload + .geo"]
+    MB["mapbiomas_windowed\njanela GDAL + .sol"]
+    AW["atdi_writer\nbinário 1010-byte header"]
+    SS["sentinel_stac\nSTAC + .img"]
+    OT["osm_tiles\nOSM tiles + .img"]
+    TD["tile_downloader\nMBTiles Google/Bing/OSM"]
+    MI["mbtiles_to_img\nMBTiles → .img"]
+    AJ["audit_jsonl\npersistência auditoria"]
+  end
+
+  Interface --> Aplicacao
+  Aplicacao --> Dominio
+  Aplicacao --> Infra
+  Dominio -.->|"interfaces"| Infra
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="estrutura">
+<h1>Estrutura de Arquivos</h1>
+<div class="filetree">
+<span class="ft-dir">HTZDataFactory/</span><br>
+├── <span class="ft-file">docker-compose.yml</span>    <span class="ft-comment"># 5 serviços: api worker redis nginx flower</span><br>
+├── <span class="ft-file">Dockerfile</span>             <span class="ft-comment"># python:3.11-slim + GDAL + requirements</span><br>
+├── <span class="ft-file">requirements.txt</span>       <span class="ft-comment"># FastAPI, Celery, Rasterio, NumPy, Pillow...</span><br>
+├── <span class="ft-file">.env.example</span>           <span class="ft-comment"># template de configuração</span><br>
+├── <span class="ft-file">.env</span>                   <span class="ft-comment"># configuração local (git-ignored)</span><br>
+├── <span class="ft-dir">config/</span><br>
+│   └── <span class="ft-file">mapbiomas_atdi.csv</span> <span class="ft-comment"># tabela reclassificação editável sem rebuild</span><br>
+├── <span class="ft-dir">nginx/</span><br>
+│   └── <span class="ft-file">nginx.conf</span>         <span class="ft-comment"># proxy, rate limits, security headers</span><br>
+├── <span class="ft-dir">docs/</span><br>
+│   └── <span class="ft-file">index.html</span>         <span class="ft-comment"># esta documentação</span><br>
+├── <span class="ft-dir">dados/</span>                  <span class="ft-comment"># dados externos (pode ser bind-mount externo)</span><br>
+│   ├── <span class="ft-dir">fabdem/</span>             <span class="ft-comment"># GeoJSON catálogo + tiles .tif + blocos .zip</span><br>
+│   └── <span class="ft-dir">mapbiomas/</span>          <span class="ft-comment"># TIF collection 10 ~5.5 GB</span><br>
+├── <span class="ft-dir">saidas/</span>                 <span class="ft-comment"># jobs gerados + previews MBTiles</span><br>
+│   ├── <span class="ft-dir">{job_id}/</span>           <span class="ft-comment"># por job: .geo .sol .img .pal ZIP audit</span><br>
+│   └── <span class="ft-dir">_img_previews/</span>      <span class="ft-comment"># MBTiles temporários de preview</span><br>
+├── <span class="ft-dir">frontend/</span><br>
+│   └── <span class="ft-file">index.html</span>         <span class="ft-comment"># SPA Leaflet (servida pelo nginx)</span><br>
+└── <span class="ft-dir">src/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">dominio/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-dir">area_interesse/</span>   <span class="ft-comment"># entidades.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-dir">catalogo/</span>         <span class="ft-comment"># entidades.py (CelulaFABDEM, TileMapBiomas)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-dir">processamento/</span>    <span class="ft-comment"># servicos.py (clutter, onion, paleta ATDI)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   └── <span class="ft-dir">auditoria/</span>        <span class="ft-comment"># entidades.py, repositorio.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">aplicacao/casos_uso/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-file">gerar_pacote_htz.py</span>  <span class="ft-comment"># orquestrador principal</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   └── <span class="ft-file">converter_arquivo.py</span> <span class="ft-comment"># conversão de GeoTIFF customizado</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">infraestrutura/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-dir">adaptadores/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">atdi_writer.py</span>       <span class="ft-comment"># writer binário ATDI (header 1010 bytes)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">fabdem_rasterio.py</span>   <span class="ft-comment"># download + merge + reprojeção FABDEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">mapbiomas_windowed.py</span> <span class="ft-comment"># janela GDAL MapBiomas</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">sentinel_stac.py</span>     <span class="ft-comment"># Sentinel-2 via Planetary Computer</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">osm_tiles.py</span>         <span class="ft-comment"># tiles OSM → .img</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   ├── <span class="ft-file">tile_downloader.py</span>   <span class="ft-comment"># Google/Bing/OSM → MBTiles SQLite</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   │   └── <span class="ft-file">mbtiles_to_img.py</span>    <span class="ft-comment"># MBTiles → .img ATDI</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   ├── <span class="ft-dir">logging/</span>             <span class="ft-comment"># setup.py (JSON structured logging)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;│   └── <span class="ft-dir">persistencia/</span>        <span class="ft-comment"># audit_jsonl.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="ft-dir">interface/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">api/</span>               <span class="ft-comment"># main.py, schemas.py</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="ft-dir">worker/</span>            <span class="ft-comment"># celery_app.py, tasks.py</span>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="diagrama-classes">
+<h1>Diagrama de Classes</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+classDiagram
+  class AreaInteresse {
+    +bbox: tuple[float,float,float,float]
+    +job_id: str
+    +layers: list[str]
+    +centro: tuple
+    +area_graus2: float
+  }
+
+  class CelulaFABDEM {
+    +codigo: str
+    +lat_min: float
+    +lat_max: float
+    +lon_min: float
+    +lon_max: float
+    +bloco_zip: str
+    +arquivo_zip: str
+    +tif_local: Optional[str]
+    +disponivel: bool
+    +intersecta(w,s,e,n): bool
+  }
+
+  class TileMapBiomas {
+    +tif_path: str
+    +west: float
+    +south: float
+    +east: float
+    +north: float
+    +resolucao_m: float
+    +bbox: tuple
+  }
+
+  class Evento {
+    +job_id: str
+    +etapa: str
+    +dados: dict
+    +ts: str
+    +to_dict(): dict
+  }
+
+  class JobRequest {
+    +bbox: list[float]
+    +layers: list[str]
+    +img_fonte: str
+    +osm_zoom: int
+    +img_preview_id: Optional[str]
+  }
+
+  class PreviewRequest {
+    +bbox: list[float]
+    +source_id: str
+    +zoom: int
+    +accepted_terms: bool
+  }
+
+  class JobStatus {
+    +job_id: str
+    +status: Literal
+    +bbox: Optional[list]
+    +zip_bytes: Optional[int]
+    +arquivos: Optional[list]
+    +progresso: Optional[list]
+    +cache_hit: Optional[bool]
+    +duracao_s: Optional[float]
+  }
+
+  class AtdiWriter {
+    +write_geo(path, data[int16], xmin, ymin, px, lon, south)
+    +write_sol(path, data[uint8], xmin, ymin, px, lon, south)
+    +write_img(path, data[uint8], xmin, ymin, px, lon, south)
+    +write_pal(path, palette_flat[768])
+    +write_pal_grayscale(path)
+    +_build_header(...): bytes
+    -_FALSE_NORTHING: 10_000_000.0
+  }
+
+  class ProcessamentoServicos {
+    +PALETTE_FLAT: list[int]
+    +carregar_tabela_reclassificacao(csv): dict
+    +reclassifica_clutter(arr, tabela): ndarray
+    +aplica_onion(clutter, pixel_m, ring_m): ndarray
+    +stats_urbanos(clutter): dict
+    -_erode_mask(mask, n): ndarray
+  }
+
+  AreaInteresse "1" --> "1..*" CelulaFABDEM : usa no processamento
+  AreaInteresse --> Evento : gera eventos de auditoria
+  JobRequest --> AreaInteresse : cria
+  JobRequest --> JobStatus : retorna
+  PreviewRequest --> JobRequest : precede (mbtiles)
+  AtdiWriter --> CelulaFABDEM : escreve .geo
+  ProcessamentoServicos --> TileMapBiomas : processa janela
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="entidades">
+<h1>Entidades do Domínio</h1>
+
+<h2>AreaInteresse</h2>
+<div class="table-wrap"><table>
+<tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr>
+<tr><td><code>bbox</code></td><td><code>tuple[float×4]</code></td><td>(west, south, east, north) em graus WGS84. Área máx: 5°×5°</td></tr>
+<tr><td><code>job_id</code></td><td><code>str</code></td><td>16 caracteres hex gerados via <code>uuid4().hex[:16]</code></td></tr>
+<tr><td><code>layers</code></td><td><code>list[str]</code></td><td>Subset de <code>{"geo", "sol", "img"}</code></td></tr>
+<tr><td><code>centro</code></td><td><code>tuple[float,float]</code></td><td>Calculado: (lon_center, lat_center)</td></tr>
+<tr><td><code>area_graus2</code></td><td><code>float</code></td><td>(east−west) × (north−south)</td></tr>
+</table></div>
+
+<h2>CelulaFABDEM</h2>
+<div class="table-wrap"><table>
+<tr><th>Campo</th><th>Tipo</th><th>Descrição</th></tr>
+<tr><td><code>codigo</code></td><td><code>str</code></td><td>Ex: "S17W048" — latitude+longitude do canto SW</td></tr>
+<tr><td><code>bloco_zip</code></td><td><code>str</code></td><td>Nome do bloco 10×10° contendo esta célula</td></tr>
+<tr><td><code>arquivo_zip</code></td><td><code>str</code></td><td>Nome do arquivo ZIP para download do bloco</td></tr>
+<tr><td><code>tif_local</code></td><td><code>Optional[str]</code></td><td>Caminho local do TIF se já baixado</td></tr>
+<tr><td><code>disponivel</code></td><td><code>bool</code></td><td>Propriedade: <code>tif_local is not None</code></td></tr>
+<tr><td><code>intersecta()</code></td><td><code>bool</code></td><td>Verifica se a célula intersecta um bbox</td></tr>
+</table></div>
+
+<h2>Evento (Auditoria)</h2>
+<div class="table-wrap"><table>
+<tr><th>Etapa</th><th>Dados registrados</th></tr>
+<tr><td><code>inicio</code></td><td>bbox, layers</td></tr>
+<tr><td><code>fabdem</code></td><td>arquivo, bytes, largura, altura</td></tr>
+<tr><td><code>mapbiomas</code></td><td>arquivo, bytes, urban_8m, urban_15m, urban_30m, urban_50m</td></tr>
+<tr><td><code>sentinel2</code></td><td>arquivo, bytes, cena_id, data, nuvens_pct</td></tr>
+<tr><td><code>osm_img</code></td><td>arquivo, bytes, zoom</td></tr>
+<tr><td><code>mbtiles_img</code></td><td>arquivo, bytes, preview_id</td></tr>
+<tr><td><code>concluido</code></td><td>zip, zip_bytes, n_arquivos, duracao_s</td></tr>
+<tr><td><code>erro</code></td><td>msg, duracao_s</td></tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="servicos-dominio">
+<h1>Serviços de Domínio</h1>
+
+<h2>Paleta ATDI (PALETTE_FLAT)</h2>
+<div class="table-wrap"><table>
+<tr><th>Código</th><th>Nome ATDI</th><th>Cor RGB</th><th>Uso típico</th></tr>
+<tr><td>0</td><td>open</td><td>240, 240, 240</td><td>Campo aberto, nodata</td></tr>
+<tr><td>1</td><td>suburban</td><td>91, 90, 238</td><td>Subúrbio</td></tr>
+<tr><td>2</td><td>urban 8m</td><td>90, 167, 242</td><td>Área urbana (base)</td></tr>
+<tr><td>3</td><td>urban 15m</td><td>90, 243, 247</td><td>Cebola urbana — anel 1</td></tr>
+<tr><td>4</td><td>urban 30m</td><td>89, 247, 172</td><td>Cebola urbana — anel 2</td></tr>
+<tr><td>5</td><td>forest</td><td>96, 226, 97</td><td>Floresta densa</td></tr>
+<tr><td>6</td><td>hydro</td><td>138, 198, 92</td><td>Água / áreas alagadas</td></tr>
+<tr><td>7</td><td>urban 50m</td><td>249, 248, 89</td><td>Cebola urbana — núcleo</td></tr>
+<tr><td>8</td><td>wood</td><td>247, 184, 92</td><td>Cerrado / mata aberta</td></tr>
+<tr><td>9</td><td>roof</td><td>241, 90, 90</td><td>Telhado / edificação</td></tr>
+<tr><td>10</td><td>rail</td><td>160, 160, 160</td><td>Ferrovia</td></tr>
+<tr><td>11</td><td>road</td><td>210, 210, 210</td><td>Rodovia</td></tr>
+</table></div>
+
+<h2>Efeito Cebola Urbano (aplica_onion)</h2>
+<p>Eleva a densidade de clutter do exterior para o interior de manchas urbanas por erosão iterativa. Parta de todos os pixels <code>urban 8m</code> (código 2) e aplica erosão 3×3 com <code>ring_width_m = 300 m</code> (10 pixels a 30 m/px):</p>
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph LR
+  A["Código 2\nurban 8m\n(exterior)"] -->|"erosão 1×"| B["Código 3\nurban 15m"]
+  B -->|"erosão 2×"| C["Código 4\nurban 30m"]
+  C -->|"erosão 3×"| D["Código 7\nurban 50m\n(núcleo)"]
+  style A fill:#1a5a7a,color:#fff
+  style B fill:#1a7a7a,color:#fff
+  style C fill:#1a6a3a,color:#fff
+  style D fill:#7a7a1a,color:#fff
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="casos-uso">
+<h1>Diagrama de Casos de Uso</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph TD
+  U([👤 Engenheiro RF])
+
+  subgraph HTZDataFactory
+    UC1["Gerar Pacote HTZ\n(geo + sol + img)"]
+    UC2["Pré-visualizar Imagem\n(Google/Bing/OSM)"]
+    UC3["Converter GeoTIFF\npersonalizado"]
+    UC4["Monitorar Job\n(polling status)"]
+    UC5["Baixar Arquivos\n(ZIP ou individual)"]
+    UC6["Visualizar Grade\nFABDEM no mapa"]
+    UC7["Baixar FABDEM\npor demanda"]
+    UC8["Ver Auditoria\ndo job"]
+  end
+
+  U --> UC1
+  U --> UC2
+  U --> UC3
+  U --> UC4
+  U --> UC5
+  U --> UC6
+  U --> UC8
+  UC1 --> UC4
+  UC1 --> UC5
+  UC2 -->|"confirmar"| UC1
+  UC7 -.->|"incluso em"| UC1
+  UC3 --> UC4
+  UC3 --> UC5
+</div>
+</div>
+
+<div class="table-wrap"><table>
+<tr><th>Caso de Uso</th><th>Ator</th><th>Pré-condição</th><th>Resultado</th></tr>
+<tr><td>Gerar Pacote HTZ</td><td>Engenheiro RF</td><td>Área selecionada, layers escolhidos, dados disponíveis</td><td>ZIP com .geo .sol .img .pal manifesto audit</td></tr>
+<tr><td>Pré-visualizar Imagem</td><td>Engenheiro RF</td><td>Área selecionada, fonte escolhida, termos aceitos</td><td>Tiles renderizados no mapa para aprovação</td></tr>
+<tr><td>Converter GeoTIFF</td><td>Engenheiro RF</td><td>Arquivo TIF válido (DEM/clutter/imagem)</td><td>Arquivo ATDI correspondente (.geo/.sol/.img+.pal)</td></tr>
+<tr><td>Monitorar Job</td><td>Engenheiro RF</td><td>Job criado (pending/running)</td><td>Log de progresso em tempo real via polling</td></tr>
+<tr><td>Baixar Arquivos</td><td>Engenheiro RF</td><td>Job concluído (done)</td><td>ZIP completo ou arquivo individual</td></tr>
+<tr><td>Visualizar Grade FABDEM</td><td>Engenheiro RF</td><td>Catálogo GeoJSON disponível</td><td>Mapa com tiles verdes (disponíveis) e vermelhos (ausentes)</td></tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="seq-gerar">
+<h1>Diagrama de Sequência — Gerar Pacote HTZ</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+sequenceDiagram
+  actor User as Engenheiro RF
+  participant FE as Frontend (Leaflet)
+  participant API as API FastAPI
+  participant Redis
+  participant Worker as Celery Worker
+  participant FABDEM as FABDEM (Bristol)
+  participant MB as MapBiomas (local)
+  participant S2 as Planetary Computer
+
+  User->>FE: Shift+drag área + seleciona layers
+  User->>FE: Clica "Gerar"
+  FE->>API: POST /jobs {bbox, layers, img_fonte}
+  API->>API: Valida JobRequest (bbox, layers, área)
+  API->>API: Verifica cache LRU (SHA256 bbox+layers)
+  API->>Redis: enfileira gerar_pacote_task
+  API-->>FE: 202 {job_id, status: pending}
+
+  loop polling a cada 2s
+    FE->>API: GET /jobs/{job_id}
+    API-->>FE: {status, progresso[]}
+  end
+
+  Redis->>Worker: despacha task
+  Worker->>Worker: AreaInteresse(bbox, layers)
+
+  alt layer "geo"
+    Worker->>Worker: consulta catálogo GeoJSON
+    Worker->>FABDEM: GET ZIP bloco (se TIF ausente)
+    FABDEM-->>Worker: ZIP do bloco
+    Worker->>Worker: extrai TIF, merge, reprojeta UTM
+    Worker->>Worker: write_geo() → .geo (int16 LE)
+  end
+
+  alt layer "sol"
+    Worker->>MB: leitura janelada GDAL (sem carregar tudo)
+    MB-->>Worker: array uint8 (apenas bbox + margem)
+    Worker->>Worker: reclassifica_clutter() via CSV
+    Worker->>Worker: aplica_onion() (erosão 3×3)
+    Worker->>Worker: write_sol() → .sol (uint8)
+  end
+
+  alt layer "img" + sentinel2
+    Worker->>S2: STAC search (cloud < 20%)
+    S2-->>Worker: metadata da cena
+    Worker->>S2: download bandas R,G,B (VSICURL)
+    S2-->>Worker: arrays uint16
+    Worker->>Worker: BT.601 grayscale + stretch p2-p98
+    Worker->>Worker: reprojeção UTM 15m
+    Worker->>Worker: write_img() + write_pal_grayscale()
+  end
+
+  Worker->>Worker: manifesto.json + audit.jsonl
+  Worker->>Worker: ZIP comprime tudo
+  Worker->>Redis: resultado {zip_path, arquivos, duracao_s}
+
+  FE->>API: GET /jobs/{job_id}/files
+  API-->>FE: lista de arquivos com URLs
+  FE->>User: exibe painel de download
+  User->>FE: clica "Download ZIP"
+  FE->>API: GET /jobs/{job_id}/download
+  API-->>FE: FileResponse (ZIP)
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="seq-preview">
+<h1>Diagrama de Sequência — Preview de Tiles</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+sequenceDiagram
+  actor User as Engenheiro RF
+  participant FE as Frontend (Leaflet)
+  participant API as API FastAPI
+  participant TD as TileDownloader
+  participant SRC as Google/Bing/OSM
+
+  User->>FE: Seleciona fonte (Google Satellite)
+  FE-->>User: Mostra checkbox de termos
+  User->>FE: Aceita termos + zoom 15 + "Baixar"
+  FE->>API: POST /img/preview {bbox, source_id, zoom, accepted_terms:true}
+  API->>API: Valida PreviewRequest
+  API->>API: Estima número de tiles (_count_tiles)
+  API->>API: Cria preview_id, _previews[id] = {status:pending}
+  API->>TD: run_in_executor → download()
+  API-->>FE: 202 {preview_id, total_tiles}
+
+  loop polling a cada 1s
+    FE->>API: GET /img/preview/{id}/status
+    API-->>FE: {status, done, total, percent}
+    FE->>FE: atualiza barra de progresso
+  end
+
+  TD->>TD: calcula tile range (x0,y0)→(x1,y1)
+  TD->>TD: init MBTiles SQLite
+  loop para cada tile (z,x,y)
+    TD->>SRC: GET tile URL (XYZ ou Quadkey)
+    SRC-->>TD: PNG/JPEG bytes
+    TD->>TD: _write_tile() → SQLite (y_tms = 2^z-1-y)
+    TD->>TD: sleep 50ms (rate limit gentileza)
+  end
+  TD->>TD: commit SQLite
+  TD->>API: {total, downloaded, failed, complete:true}
+  API->>API: _previews[id].status = "done"
+
+  FE->>API: GET /img/preview/{id}/status → done
+  FE->>FE: L.tileLayer(..., minNativeZoom=15, maxNativeZoom=15)
+  FE->>FE: map.fitBounds(bbox)
+  FE-->>User: Imagem visível no mapa
+
+  User->>FE: Clica "✔ Usar esta imagem"
+  FE->>FE: _previewState.confirmed = true
+
+  User->>FE: Clica "Gerar" com layers selecionados
+  FE->>API: POST /jobs {img_fonte:"mbtiles", img_preview_id:id}
+  API->>API: Valida preview existe e está "done"
+  Note over API: continua fluxo normal de geração
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="seq-fabdem">
+<h1>Diagrama de Sequência — Download FABDEM por Demanda</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+sequenceDiagram
+  participant Worker
+  participant Catalog as GeoJSON Catálogo
+  participant FS as Sistema de Arquivos
+  participant Bristol as data.bris.ac.uk
+
+  Worker->>Catalog: _load_catalog(geojson_path)
+  Catalog-->>Worker: list[CelulaFABDEM]
+  Worker->>Worker: filtra células que intersectam bbox
+
+  loop para cada célula relevante
+    Worker->>FS: _encontrar_tif_local(codigo_FABDEM, fabdem_dir)
+    alt TIF já existe (raiz ou subpasta)
+      FS-->>Worker: caminho do .tif
+    else TIF ausente
+      Worker->>Bristol: GET ZIP bloco (arquivo_zip_estimado)
+      Bristol-->>Worker: ZIP bytes
+      Worker->>Worker: zipfile.ZipFile — extrai só o TIF necessário
+      Worker->>FS: salva .tif em fabdem_dir/
+      FS-->>Worker: caminho do .tif
+    end
+  end
+
+  Worker->>Worker: rasterio.merge(datasets, bounds=clip_bounds)
+  Worker->>Worker: reproject WGS84 → UTM {epsg} @ 30m
+  Worker->>Worker: clip nodata → 0 (nível do mar)
+  Worker->>Worker: write_geo(path, int16_LE, xmin, ymin, 30, lon_c, south)
+  Worker-->>Worker: (geo_path, grade{xmin,ymin,width,height,utm_epsg})
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="seq-convert">
+<h1>Diagrama de Sequência — Converter GeoTIFF Customizado</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+sequenceDiagram
+  actor User
+  participant FE as Frontend
+  participant Nginx
+  participant API
+  participant Conv as converter_arquivo.py
+
+  User->>FE: Seleciona TIF + tipo (dem/clutter/img)
+  FE->>Nginx: POST /convert (multipart/form-data)
+  Nginx->>API: proxy (rate limit: upload zone 1r/s burst=3)
+  API->>API: valida magic bytes TIFF (primeiros 4 bytes)
+  API->>API: verifica tamanho ≤ MAX_UPLOAD_BYTES
+  API->>API: salva em temp file seguro
+
+  alt tipo = dem
+    API->>Conv: converter_dem(tif_path, output_dir)
+    Conv->>Conv: rasterio.open → detecta CRS/projeção
+    Conv->>Conv: reproject → UTM @ 30m (PIXEL_GEO)
+    Conv->>Conv: write_geo() → .geo
+    Conv-->>API: [geo_path]
+  else tipo = clutter
+    API->>Conv: converter_clutter(tif_path, ..., aplicar_onion, formato)
+    Conv->>Conv: lê CSV reclassificação
+    Conv->>Conv: reclassifica_clutter() + aplica_onion()
+    Conv->>Conv: write_sol() → .sol
+    Conv-->>API: [sol_path]
+  else tipo = img
+    API->>Conv: converter_img(tif_path, output_dir)
+    Conv->>Conv: detecta bandas (RGB → BT.601) ou banda única
+    Conv->>Conv: normaliza uint8 (p2-p98)
+    Conv->>Conv: reproject → UTM @ 15m
+    Conv->>Conv: write_img() + write_pal_grayscale() → .img + .pal
+    Conv-->>API: [img_path, pal_path]
+  end
+
+  API->>API: cria ZIP com arquivos
+  API-->>FE: {job_id, status, arquivos}
+  FE-->>User: painel de download
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="adaptadores">
+<h1>Adaptadores de Infraestrutura</h1>
+
+<h2>atdi_writer.py — Writer Binário ATDI</h2>
+<p>Gera o header de 1010 bytes e os dados de pixel para cada tipo de arquivo ATDI. Único ponto de geração de binário no sistema.</p>
+<div class="table-wrap"><table>
+<tr><th>Função</th><th>Retorno</th><th>Responsabilidade</th></tr>
+<tr><td><code>write_geo(path, data, xmin, ymin, px, lon, south)</code></td><td>—</td><td>Elevação int16 little-endian, 2 bytes/pixel</td></tr>
+<tr><td><code>write_sol(path, data, xmin, ymin, px, lon, south)</code></td><td>—</td><td>Clutter uint8, 1 byte/pixel (códigos 0-11)</td></tr>
+<tr><td><code>write_img(path, data, xmin, ymin, px, lon, south)</code></td><td>—</td><td>Imagem grayscale uint8, 1 byte/pixel</td></tr>
+<tr><td><code>write_pal(path, palette_flat)</code></td><td>—</td><td>240 entradas RGB × 30 bytes = 7200 bytes</td></tr>
+<tr><td><code>write_pal_grayscale(path)</code></td><td>—</td><td>Rampa cinza R=G=B=i para uso com .img</td></tr>
+<tr><td><code>_build_header(...)</code></td><td><code>bytes[1010]</code></td><td>Header ATDI com UTM, dimensões, false northing</td></tr>
+</table></div>
+
+<div class="callout callout-warn">
+<strong>⚠ False Northing</strong>
+EPSG:327xx adiciona 10.000.000 m ao Y (hemisfério sul). O ATDI espera Y negativo. O writer subtrai automaticamente quando <code>south=True</code>: <code>yatdi = yepsg − 10.000.000</code>
+</div>
+
+<h2>tile_downloader.py — Download MBTiles</h2>
+<div class="table-wrap"><table>
+<tr><th>Fonte</th><th>Kind</th><th>Zoom</th><th>URL / Protocolo</th></tr>
+<tr><td>Google Satellite</td><td>XYZ</td><td>12-18</td><td><code>mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}</code></td></tr>
+<tr><td>Bing Satellite</td><td>Quadkey</td><td>12-18</td><td><code>ecn.t{s}.tiles.virtualearth.net/tiles/a{q}.jpeg</code></td></tr>
+<tr><td>OpenStreetMap</td><td>XYZ</td><td>12-17</td><td><code>tile.openstreetmap.org/{z}/{x}/{y}.png</code></td></tr>
+</table></div>
+
+<p><strong>Conversão Quadkey (Bing):</strong> para cada bit do zoom do maior para o menor, testa se X tem o bit setado (+1) e se Y tem o bit setado (+2).</p>
+<p><strong>Y TMS:</strong> SQLite MBTiles usa convenção TMS onde <code>y_tms = 2^z − 1 − y_xyz</code></p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="atdi-format">
+<h1>Formato Binário ATDI — Header 1010 bytes</h1>
+<p class="lead">Header idêntico para todos os tipos (.geo, .sol, .img). Descoberto por engenharia reversa do arquivo de referência <code>06S035W.sol</code> (área de Natal, RN).</p>
+
+<div class="table-wrap offset-table"><table>
+<tr><th>Offset (bytes)</th><th>Tamanho</th><th>Conteúdo</th><th>Exemplo</th></tr>
+<tr><td>0 – 159</td><td>160</td><td>Zeros (padding inicial)</td><td><code>00 00 00 ... 00</code></td></tr>
+<tr><td>160 – ~279</td><td>variável</td><td>4 cantos UTM em ASCII<br>Formato por canto: <code>{x:.6f}\x00\x00{y:.6f}</code><br>Ordem: NW → NE → SW → SE</td><td><code>515337.000000\x00\x009565430.000000</code></td></tr>
+<tr><td>~280 – ~300</td><td>variável</td><td>pixel_size_x\x00 pixel_size_y\x00</td><td><code>30.000000\x0030.000000\x00</code></td></tr>
+<tr><td>300</td><td>1</td><td><code>'M'</code> — unidade metros</td><td><code>4D</code></td></tr>
+<tr><td>320 – 323</td><td>4</td><td>Largura em pixels (ASCII decimal)</td><td><code>31333432</code> = "1342"</td></tr>
+<tr><td>330 – 333</td><td>4</td><td>Altura em pixels (ASCII decimal)</td><td><code>31313131</code> = "1111"</td></tr>
+<tr><td>340 – 348</td><td>9</td><td><code>'4UTN{zona:02d} 00'</code></td><td><code>34 55 54 4E 32 35 20 30 30</code> = "4UTN25 00"</td></tr>
+<tr><td>371 – 378</td><td>8</td><td><code>'UTN{zona:02d} 00'</code></td><td><code>55 54 4E 32 35 20 30 30</code> = "UTN25 00"</td></tr>
+<tr><td>380</td><td>1</td><td><code>'0'</code></td><td><code>30</code></td></tr>
+<tr><td>390</td><td>1</td><td><code>'1'</code></td><td><code>31</code></td></tr>
+<tr><td>415 – 417</td><td>3</td><td><code>'IMG'</code></td><td><code>49 4D 47</code></td></tr>
+<tr><td>515, 530, 545...<br>(8 offsets, +15)</td><td>8×8</td><td>Parâmetros offset geocêntrico (todos zero)<br><code>'0.000000'</code></td><td><code>30 2E 30 30 30 30 30 30</code></td></tr>
+<tr><td>1009</td><td>1</td><td><code>0x1A</code> — EOF marker DOS (Ctrl+Z)</td><td><code>1A</code></td></tr>
+</table></div>
+
+<h2>Dados após o Header (offset 1010)</h2>
+<div class="table-wrap"><table>
+<tr><th>Arquivo</th><th>Tipo</th><th>Bytes/pixel</th><th>Conteúdo</th></tr>
+<tr><td><code>.sol</code></td><td>uint8</td><td>1</td><td>Código de clutter ATDI (0–11)</td></tr>
+<tr><td><code>.geo</code></td><td>int16 LE</td><td>2</td><td>Elevação em metros (Y negativo no HS)</td></tr>
+<tr><td><code>.img</code></td><td>uint8</td><td>1</td><td>Luminância grayscale 1–255 (0 = nodata)</td></tr>
+</table></div>
+
+<div class="callout callout-info">
+<strong>ℹ Zona UTM</strong>
+<code>zona = int((longitude + 180) / 6) + 1</code><br>
+Exemplo: lon = −43° W → zona = int(137/6)+1 = 23 → código <code>UTN23</code>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="pal-format">
+<h1>Formato .pal (7200 bytes)</h1>
+<p>O arquivo <code>.pal</code> é uma LUT (look-up table) exclusiva do arquivo <code>.img</code>. O <code>.sol</code> (clutter) <strong>não usa</strong> <code>.pal</code> — o HTZ usa suas próprias configurações de cores para clutter.</p>
+
+<div class="callout callout-green">
+<strong>✔ Formato confirmado por análise hex</strong>
+Referência: <code>06S035W.pal</code> (área de Natal, 7200 bytes)<br>
+708 de 720 campos usam o formato simples. 12 exceções nas entradas 236–239 são valores decimais raros irrelevantes para nossa paleta.
+</div>
+
+<h2>Estrutura</h2>
+<pre><code>240 entradas × 30 bytes = 7200 bytes
+
+Por entrada (30 bytes):
+  Canal R:  10 bytes
+  Canal G:  10 bytes
+  Canal B:  10 bytes
+
+Por campo (10 bytes) — formato Natal (confirmado):
+  str(valor).encode('ascii') + b'\x00' * (10 - len(str(valor)))
+
+Exemplos:
+  valor=0   → b'0\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  valor=31  → b'31\x00\x00\x00\x00\x00\x00\x00\x00'
+  valor=240 → b'240\x00\x00\x00\x00\x00\x00\x00'</code></pre>
+
+<h2>Tipos de .pal gerados</h2>
+<div class="table-wrap"><table>
+<tr><th>Função</th><th>Tipo</th><th>Uso</th></tr>
+<tr><td><code>write_pal_grayscale(path)</code></td><td>Rampa linear R=G=B=i (0-239)</td><td>Acompanha qualquer .img para exibição em escala de cinza</td></tr>
+<tr><td><code>write_pal(path, PALETTE_FLAT)</code></td><td>12 cores ATDI definidas</td><td>Disponível para uso futuro / conversão manual</td></tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="mbtiles">
+<h1>MBTiles — Preview de Imagens</h1>
+<p>Tiles baixados de fontes externas são armazenados em SQLite usando o esquema MBTiles v1.1 antes de serem convertidos em <code>.img</code> ATDI.</p>
+
+<h2>Schema SQLite</h2>
+<pre><code>CREATE TABLE metadata (
+    name  TEXT PRIMARY KEY,
+    value TEXT
+);
+
+CREATE TABLE tiles (
+    zoom_level  INTEGER NOT NULL,
+    tile_column INTEGER NOT NULL,
+    tile_row    INTEGER NOT NULL,  -- CONVENÇÃO TMS: y_tms = 2^zoom - 1 - y_xyz
+    tile_data   BLOB NOT NULL,
+    PRIMARY KEY (zoom_level, tile_column, tile_row)
+);</code></pre>
+
+<h2>Metadados armazenados</h2>
+<div class="table-wrap"><table>
+<tr><th>Chave</th><th>Valor Exemplo</th></tr>
+<tr><td>name</td><td>Google Satellite</td></tr>
+<tr><td>format</td><td>jpg</td></tr>
+<tr><td>bounds</td><td>-47.5,-16,-47,-15.5</td></tr>
+<tr><td>minzoom / maxzoom</td><td>15 / 15</td></tr>
+<tr><td>htz:source_id</td><td>google_satellite</td></tr>
+<tr><td>htz:accepted_terms</td><td>true</td></tr>
+</table></div>
+
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph LR
+  A["POST /img/preview\n{bbox, source_id, zoom}"] -->|"download em thread"| B["tile_downloader.download()\nHTTP tiles → SQLite"]
+  B --> C["{preview_id}.mbtiles\nsaidas/_img_previews/"]
+  C -->|"GET /img/preview/{id}/tile/{z}/{x}/{y}"| D["Leaflet TileLayer\nno mapa"]
+  C -->|"POST /jobs {img_fonte: mbtiles}"| E["mbtiles_to_img.process()\nSQLite → PIL → UTM → .img"]
+  E --> F["{basename}.img\n+ {basename}.pal"]
+</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="api-jobs">
+<h1>API — Endpoints /jobs</h1>
+<div class="table-wrap"><table>
+<tr><th>Método</th><th>Rota</th><th>Corpo / Params</th><th>Retorno</th><th>Descrição</th></tr>
+<tr>
+  <td><span class="badge badge-post">POST</span></td>
+  <td><code>/jobs</code></td>
+  <td><code>JobRequest</code></td>
+  <td><code>JobStatus 202</code></td>
+  <td>Cria job. Verifica cache LRU. Despacha para Celery ou asyncio</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs/{job_id}</code></td>
+  <td>—</td>
+  <td><code>JobStatus</code></td>
+  <td>Status atual com últimas 50 linhas de log</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs/{job_id}/download</code></td>
+  <td>—</td>
+  <td><code>FileResponse (ZIP)</code></td>
+  <td>Download do ZIP completo. Path traversal bloqueado</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs/{job_id}/files</code></td>
+  <td>—</td>
+  <td><code>{arquivos[]}</code></td>
+  <td>Lista arquivos com tamanhos e URLs individuais</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs/{job_id}/download/{filename}</code></td>
+  <td>—</td>
+  <td><code>FileResponse</code></td>
+  <td>Arquivo individual. Whitelist: .geo .sol .pal .img .zip .json .jsonl</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs/{job_id}/audit</code></td>
+  <td>—</td>
+  <td><code>{eventos[]}</code></td>
+  <td>Histórico de auditoria do job (JSONL parseado)</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/jobs</code></td>
+  <td>—</td>
+  <td><code>list[JobListItem]</code></td>
+  <td>Lista todos os jobs em memória</td>
+</tr>
+</table></div>
+
+<h2>JobRequest — Schema</h2>
+<pre><code>{
+  "bbox": [-47.5, -16.0, -47.0, -15.5],   // [west, south, east, north] WGS84
+  "layers": ["geo", "sol", "img"],          // subset permitido
+  "img_fonte": "sentinel2",                 // "sentinel2" | "osm" | "mbtiles"
+  "osm_zoom": 15,                           // 12-17 (apenas se img_fonte="osm")
+  "img_preview_id": null                    // obrigatório se img_fonte="mbtiles"
+}</code></pre>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="api-img">
+<h1>API — Endpoints /img/preview</h1>
+<div class="table-wrap"><table>
+<tr><th>Método</th><th>Rota</th><th>Descrição</th></tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/img/sources</code></td>
+  <td>Lista fontes de tiles com metadados (zoom min/max, atribuição, disclaimer)</td>
+</tr>
+<tr>
+  <td><span class="badge badge-post">POST</span></td>
+  <td><code>/img/preview</code></td>
+  <td>Inicia download de tiles em background. Retorna <code>preview_id</code> imediatamente (202)</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/img/preview/{id}/status</code></td>
+  <td>Progresso: <code>{status, done, total, percent, source_name, error}</code></td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/img/preview/{id}/tile/{z}/{x}/{y}</code></td>
+  <td>Serve tile PNG/JPEG do MBTiles. Retorna 404 se ausente (não cacheado pelo browser)</td>
+</tr>
+<tr>
+  <td><span class="badge badge-delete">DELETE</span></td>
+  <td><code>/img/preview/{id}</code></td>
+  <td>Remove preview do estado e apaga arquivo MBTiles do disco</td>
+</tr>
+</table></div>
+
+<h2>PreviewRequest — Schema</h2>
+<pre><code>{
+  "bbox": [-47.5, -16.0, -47.0, -15.5],
+  "source_id": "google_satellite",   // "google_satellite" | "bing_satellite" | "osm"
+  "zoom": 15,                         // range varia por fonte
+  "accepted_terms": true              // obrigatório = true
+}</code></pre>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="api-tiles">
+<h1>API — Endpoints /tiles</h1>
+<div class="table-wrap"><table>
+<tr><th>Método</th><th>Rota</th><th>Retorno</th><th>Descrição</th></tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/tiles/fabdem</code></td>
+  <td><code>FeatureCollection</code></td>
+  <td>GeoJSON com 810 células FABDEM do Brasil. Cada feature tem: <code>downloaded</code>, <code>tif_extraido</code>, <code>bloco_presente</code>. Scan recursivo de subpastas</td>
+</tr>
+<tr>
+  <td><span class="badge badge-get">GET</span></td>
+  <td><code>/tiles/mapbiomas</code></td>
+  <td><code>Feature</code></td>
+  <td>GeoJSON com bbox do arquivo MapBiomas local. Inclui metadados: nome, resolução, ano, tamanho</td>
+</tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="api-outros">
+<h1>API — Outros Endpoints</h1>
+<div class="table-wrap"><table>
+<tr><th>Método</th><th>Rota</th><th>Descrição</th></tr>
+<tr><td><span class="badge badge-get">GET</span></td><td><code>/</code></td><td>Root info: serviço, versão, URL docs</td></tr>
+<tr><td><span class="badge badge-get">GET</span></td><td><code>/health</code></td><td>Health check: <code>{status, backend, fabdem_ok, mapbiomas_ok, csv_ok}</code></td></tr>
+<tr><td><span class="badge badge-get">GET</span></td><td><code>/status</code></td><td>Status das camadas disponíveis por tipo. Não expõe paths internos</td></tr>
+<tr><td><span class="badge badge-post">POST</span></td><td><code>/convert</code></td><td>Converte GeoTIFF customizado. Form-data: file, tipo (dem/clutter/img), formato_clutter, aplicar_onion</td></tr>
+<tr><td><span class="badge badge-delete">DELETE</span></td><td><code>/cache</code></td><td>Limpa cache LRU de jobs. Requer header <code>X-API-Key</code> se configurado</td></tr>
+<tr><td><span class="badge badge-get">GET</span></td><td><code>/docs</code></td><td>Swagger UI interativo (OpenAPI 3.0)</td></tr>
+<tr><td><span class="badge badge-get">GET</span></td><td><code>/app/</code></td><td>Frontend Leaflet (servido pelo nginx diretamente)</td></tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="env-vars">
+<h1>Variáveis de Ambiente (.env)</h1>
+<div class="table-wrap"><table>
+<tr><th>Variável</th><th>Padrão</th><th>Obrigatório</th><th>Descrição</th></tr>
+<tr><td><code>FABDEM_DIR</code></td><td>—</td><td>✅ Sim</td><td>Pasta com GeoJSON catálogo e tiles .tif FABDEM</td></tr>
+<tr><td><code>MAPBIOMAS_DIR</code></td><td>—</td><td>✅ Sim</td><td>Pasta com o arquivo TIF MapBiomas (~5.5 GB)</td></tr>
+<tr><td><code>MAPBIOMAS_FILENAME</code></td><td><code>mapbiomas_10m_collection2_integration_v1-classification_2023.tif</code></td><td>✅ Sim</td><td>Nome exato do arquivo TIF</td></tr>
+<tr><td><code>HTZ_API_KEY</code></td><td>""</td><td>Não</td><td>Chave para DELETE /cache. Vazio = sem proteção</td></tr>
+<tr><td><code>FLOWER_USER</code></td><td>admin</td><td>Não</td><td>Usuário dashboard Flower</td></tr>
+<tr><td><code>FLOWER_PASSWORD</code></td><td>troque_aqui</td><td>⚠ Em prod</td><td>Senha dashboard Flower</td></tr>
+<tr><td><code>CORS_ORIGINS</code></td><td>http://localhost:8080</td><td>Não</td><td>Origens CORS permitidas (separadas por vírgula)</td></tr>
+<tr><td><code>HTTP_PORT</code></td><td>8080</td><td>Não</td><td>Porta exposta pelo nginx</td></tr>
+<tr><td><code>FLOWER_PORT</code></td><td>5555</td><td>Não</td><td>Porta dashboard workers (apenas localhost)</td></tr>
+<tr><td><code>GDAL_CACHEMAX</code></td><td>4096</td><td>Não</td><td>Cache GDAL em MB (~25% da RAM)</td></tr>
+<tr><td><code>MAX_CONCURRENT_JOBS</code></td><td>4</td><td>Não</td><td>Jobs simultâneos na API (semáforo asyncio)</td></tr>
+<tr><td><code>WORKER_CONCURRENCY</code></td><td>4</td><td>Não</td><td>Processos paralelos Celery por worker</td></tr>
+<tr><td><code>WORKER_MEMORY_LIMIT</code></td><td>8G</td><td>Não</td><td>Limite de memória do container worker</td></tr>
+<tr><td><code>MAX_UPLOAD_BYTES</code></td><td>524288000</td><td>Não</td><td>Tamanho máximo de upload (500 MB)</td></tr>
+</table></div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="docker">
+<h1>Docker Compose — Serviços</h1>
+<div class="mermaid-wrap">
+<div class="mermaid">
+graph LR
+  subgraph Docker Network
+    nginx["nginx:1.27\n:8080→:80\nproxy + static"]
+    api["api\nFastAPI :8000\n(not exposed)"]
+    worker["worker\nCelery prefork\n(not exposed)"]
+    redis["redis:7\n:6379\n(internal)"]
+    flower["flower\nlocalhost:5555\nmonitor"]
+  end
+
+  Internet["Browser\n:8080"] --> nginx
+  nginx --> api
+  api --> redis
+  worker --> redis
+  flower --> redis
+
+  subgraph Volumes
+    vf["/dados/fabdem :ro\nFABDEM_DIR"]
+    vm["/dados/mapbiomas :ro\nMAPBIOMAS_DIR"]
+    vs["/saidas :rw\n./saidas/"]
+    vc["/config :ro\n./config/"]
+    vsrc["/app/src :ro\n./src/"]
+    vfe["/app/frontend :ro\n./frontend/"]
+  end
+
+  api --> vf
+  api --> vm
+  api --> vs
+  api --> vc
+  api --> vsrc
+  api --> vfe
+  worker --> vf
+  worker --> vm
+  worker --> vs
+  worker --> vc
+  worker --> vsrc
+</div>
+</div>
+
+<div class="callout callout-info">
+<strong>ℹ Live Reload</strong>
+<code>src/</code> e <code>frontend/</code> são montados como volumes read-only. Edições têm efeito imediato após <code>docker compose restart api worker</code>. Rebuild (<code>--build</code>) só é necessário quando <code>Dockerfile</code> ou <code>requirements.txt</code> mudam.
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="nginx">
+<h1>Nginx — Rate Limits e Segurança</h1>
+<div class="table-wrap"><table>
+<tr><th>Zona</th><th>Rate</th><th>Burst</th><th>Endpoints</th></tr>
+<tr><td><code>api_general</code></td><td>20 r/s</td><td>40</td><td>Todos os endpoints não especializados</td></tr>
+<tr><td><code>job_create</code></td><td>2 r/s</td><td>5</td><td><code>POST /jobs</code></td></tr>
+<tr><td><code>upload</code></td><td>1 r/s</td><td>3</td><td><code>POST /convert</code></td></tr>
+<tr><td><code>tile_serve</code></td><td>200 r/s</td><td>500</td><td><code>GET /img/preview/*/tile/*</code></td></tr>
+</table></div>
+
+<h2>Headers de Segurança</h2>
+<pre><code>X-Content-Type-Options:   nosniff
+X-Frame-Options:          DENY
+X-XSS-Protection:         1; mode=block
+Referrer-Policy:          no-referrer
+Permissions-Policy:       geolocation=(), microphone=(), camera=()
+Content-Security-Policy:  default-src 'self'; script-src 'self' 'unsafe-inline' unpkg.com cdn.jsdelivr.net; ...</code></pre>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="mapbiomas-csv">
+<h1>Tabela de Reclassificação MapBiomas→ATDI</h1>
+<p>Arquivo: <code>config/mapbiomas_atdi.csv</code> — editável sem rebuild. Mudanças são aplicadas no próximo job.</p>
+<pre><code>codigo_mapbiomas,nome_mapbiomas,codigo_atdi,nome_atdi,justificativa
+0,Sem dado,0,open,nodata
+3,Formação Florestal,5,forest,dossel fechado contínuo
+4,Formação Savânica,8,wood,dossel aberto (Cerrado)
+5,Mangue,5,forest,dossel fechado denso
+6,Floresta Alagável,5,forest,dossel fechado em várzea
+9,Silvicultura,5,forest,plantio de eucalipto/pinus
+11,Campo Alagado,6,hydro,superfície hídrica
+12,Formação Campestre,0,open,campo aberto
+15,Pastagem,0,open,gramado — atenuação mínima
+24,Área Urbanizada,2,urban_8m,base para efeito cebola
+33,Rio/Lago/Oceano,6,hydro,corpo hídrico
+...</code></pre>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="deploy">
+<h1>Procedimentos de Deploy</h1>
+
+<h2>Primeiro Deploy</h2>
+<pre><code># 1. Clonar repositório
+git clone https://github.com/seu-usuario/HTZDataFactory.git
+cd HTZDataFactory
+
+# 2. Criar configuração local
+cp .env.example .env
+# Editar .env: FABDEM_DIR, MAPBIOMAS_DIR, MAPBIOMAS_FILENAME
+
+# 3. Garantir GeoJSON FABDEM na pasta
+ls $FABDEM_DIR/fabdem_v1_2_brasil_celulas_1x1.geojson
+
+# 4. Build e inicialização (primeira vez ~5-10 min)
+docker compose up --build -d
+
+# 5. Verificar saúde
+docker compose ps
+curl http://localhost:8080/health</code></pre>
+
+<h2>Reinicialização (sem rebuild)</h2>
+<pre><code># Apenas código src/ ou frontend/ mudou:
+docker compose restart api worker nginx
+
+# Rebuild obrigatório (Dockerfile ou requirements.txt mudou):
+docker compose up --build -d</code></pre>
+
+<h2>Escalar Workers</h2>
+<pre><code># 3 instâncias de worker = WORKER_CONCURRENCY × 3 jobs em paralelo
+docker compose up --scale worker=3 -d</code></pre>
+
+<h2>Diagnóstico</h2>
+<pre><code># Ver logs da API
+docker compose logs api --tail=50
+
+# Ver logs de um worker
+docker compose logs worker --tail=50
+
+# Testar acesso aos dados dentro do container
+docker compose exec api ls /dados/fabdem/
+docker compose exec api ls /dados/mapbiomas/
+
+# Flower — dashboard de workers
+http://localhost:5555  (usuário/senha do .env)</code></pre>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="engrev">
+<h1>Engenharia Reversa do Formato ATDI</h1>
+<p class="lead">Processo de 10 passos para descobrir e validar o formato binário a partir do arquivo de referência <code>06S035W.sol</code> (área de Natal, RN).</p>
+
+<h2>Resumo do Processo</h2>
+<div class="table-wrap"><table>
+<tr><th>Passo</th><th>Ferramenta</th><th>Descoberta</th></tr>
+<tr><td>1</td><td>Notepad++</td><td>Arquivo não é puramente binário — há bloco ASCII antes dos dados</td></tr>
+<tr><td>2</td><td>HxD (hex editor)</td><td>Primeiros 160 bytes = zeros. Conteúdo ASCII começa em 0x0A0. Dados em 0x3F2 (offset 1010)</td></tr>
+<tr><td>3</td><td>ASCII decode manual</td><td>4 cantos UTM em ASCII com separadores <code>\x00\x00</code> entre X e Y de cada canto</td></tr>
+<tr><td>4</td><td>HxD — offsets fixos</td><td>Byte 300 = 'M' (metros). Bytes 320/330 = largura/altura. Bytes 340/371 = código UTM</td></tr>
+<tr><td>5</td><td>Cálculo manual</td><td>zona = int((lon+180)/6)+1. Confirmado para lon=-43° → zona 23 → "UTN23"</td></tr>
+<tr><td>6</td><td>HTZ software</td><td>Y no HTZ = negativo no HS. Diferença = 10.000.000 m (false northing EPSG:327xx)</td></tr>
+<tr><td>7</td><td>Cálculo tamanho</td><td>.sol: 1 byte/pixel (uint8). .geo: 2 bytes/pixel (int16 LE). .img: 1 byte/pixel (uint8)</td></tr>
+<tr><td>8</td><td>HxD — .pal</td><td>7200 bytes = 240×30. Formato campo: ASCII + null-padding até 10 bytes</td></tr>
+<tr><td>9</td><td>Writer Python</td><td>Comparação byte-a-byte com arquivo original → 100% idêntico</td></tr>
+<tr><td>10</td><td>HTZ import</td><td>Efeito cebola visível. Paleta correta. Coordenadas precisas sobre a área</td></tr>
+</table></div>
+
+<div class="callout callout-warn">
+<strong>⚠ Armadilha Principal — False Northing</strong>
+EPSG:327xx retorna Y positivo: ex. 9.565.430 m<br>
+ATDI espera Y negativo: ex. −434.570 m<br>
+Correção: <code>y_atdi = y_epsg − 10.000.000</code><br>
+Sem isso o arquivo abre no HTZ 10.000 km ao norte da posição correta.
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section id="troubleshoot">
+<h1>Troubleshooting</h1>
+
+<h2>Diagnóstico Rápido</h2>
+<div class="table-wrap"><table>
+<tr><th>Sintoma</th><th>Causa provável</th><th>Solução</th></tr>
+<tr><td><code>offline — JSON.parse</code> no frontend</td><td>nginx 502 (não atinge a API) ou containers parados</td><td><code>docker compose restart api worker nginx</code></td></tr>
+<tr><td><code>fabdem_ok: false</code> no /health</td><td>GeoJSON catálogo não encontrado em FABDEM_DIR</td><td>Verificar caminho em .env e se GeoJSON existe na pasta</td></tr>
+<tr><td><code>mapbiomas_ok: false</code></td><td>TIF não encontrado no caminho configurado</td><td>Verificar MAPBIOMAS_DIR e MAPBIOMAS_FILENAME no .env</td></tr>
+<tr><td>Job fica em <code>pending</code></td><td>Worker não está consumindo da fila</td><td><code>docker compose logs worker</code> + <code>docker compose restart worker</code></td></tr>
+<tr><td>422 ao criar preview</td><td>Termos não aceitos ou bbox inválido</td><td>Verificar <code>accepted_terms: true</code> e bbox ≤ 5°×5°</td></tr>
+<tr><td>429 nos tiles de preview</td><td>Rate limit da zona <code>api_general</code></td><td>O <code>location tile_serve</code> do nginx já resolve (200r/s burst=500)</td></tr>
+<tr><td>Tiles não aparecem no mapa</td><td>Zoom do mapa ≠ zoom dos tiles baixados</td><td><code>minNativeZoom</code>/<code>maxNativeZoom</code> já configurados no Leaflet</td></tr>
+<tr><td>Sentinel-2 falha</td><td>Sem acesso ao Planetary Computer</td><td>Usar Google/Bing/OSM como fonte alternativa</td></tr>
+<tr><td>Erro PROJ no log</td><td>PROJ_DATA apontando para versão errada</td><td><code>startup.py</code> corrige automaticamente. Forçar: <code>docker compose restart api</code></td></tr>
+<tr><td>.sol abre sem coordenadas corretas</td><td>Bbox em ordem errada ou false northing</td><td>Confirmar [west, south, east, north] e que área é no HS</td></tr>
+</table></div>
+
+<h2>Comandos de Diagnóstico</h2>
+<pre><code># Status geral
+curl http://localhost:8080/health | python -m json.tool
+
+# Ver conteúdo do volume FABDEM dentro do container
+docker compose exec api ls -la /dados/fabdem/ | head -20
+
+# Ver fila Redis
+docker compose exec redis redis-cli LLEN celery
+
+# Contar jobs Celery ativos
+docker compose exec redis redis-cli KEYS "celery-task-meta-*" | wc -l
+
+# Forçar limpeza de cache de jobs
+curl -X DELETE http://localhost:8080/cache -H "X-API-Key: SUA_CHAVE"</code></pre>
+</section>
+
+</main>
+
+<script>
+  // ── Mermaid ──────────────────────────────────────────────────────────────────
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#1e2530',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#58a6ff',
+      lineColor: '#8b949e',
+      secondaryColor: '#161b22',
+      tertiaryColor: '#0f1117',
+      background: '#0f1117',
+      mainBkg: '#1e2530',
+      nodeBorder: '#30363d',
+      clusterBkg: '#161b22',
+      titleColor: '#e6edf3',
+      edgeLabelBackground: '#1e2530',
+    },
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'linear' },
+    sequence: { useMaxWidth: true, mirrorActors: false, messageMargin: 30 },
+    c4: { useMaxWidth: true },
+  });
+
+  // ── Active nav highlight on scroll ───────────────────────────────────────────
+  const sections  = document.querySelectorAll('section[id]');
+  const navLinks  = document.querySelectorAll('nav a[href^="#"]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (link) { link.classList.add('active'); link.scrollIntoView({ block: 'nearest' }); }
+      }
+    });
+  }, { rootMargin: '-52px 0px -60% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
