@@ -208,7 +208,7 @@ async def log_requests(request: Request, call_next):
 # ── Background worker asyncio (fallback sem Celery) ──────────────────────────
 def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
                   img_fonte: str = "sentinel2", osm_zoom: int = 15,
-                  img_preview_id: str = None):
+                  img_preview_id: str = None, aplicar_onion: bool = True):
     from src.aplicacao.casos_uso.gerar_pacote_htz import executar
     _jobs_update(job_id, {"status": "running"})
     try:
@@ -222,6 +222,7 @@ def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
             img_fonte=img_fonte,
             osm_zoom=osm_zoom,
             img_preview_id=img_preview_id,
+            aplicar_onion=aplicar_onion,
             progress_cb=None,
         )
         _jobs_update(job_id, resultado)
@@ -232,14 +233,14 @@ def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
 
 async def _run_job_async(job_id: str, bbox: tuple, layers: list[str],
                          img_fonte: str = "sentinel2", osm_zoom: int = 15,
-                         img_preview_id: str = None):
+                         img_preview_id: str = None, aplicar_onion: bool = True):
     async with _semaforo:
         loop = asyncio.get_event_loop()
         try:
             await asyncio.wait_for(
                 loop.run_in_executor(
                     None, _run_job_sync, job_id, bbox, layers,
-                    img_fonte, osm_zoom, img_preview_id
+                    img_fonte, osm_zoom, img_preview_id, aplicar_onion
                 ),
                 timeout=3600,
             )
@@ -357,6 +358,7 @@ async def criar_job(request: JobRequest, background_tasks: BackgroundTasks):
     img_fonte       = request.img_fonte
     osm_zoom        = request.osm_zoom
     img_preview_id  = request.img_preview_id
+    aplicar_onion   = request.aplicar_onion
 
     # Valida que o preview existe quando img_fonte="mbtiles"
     if img_fonte == "mbtiles":
@@ -397,20 +399,21 @@ async def criar_job(request: JobRequest, background_tasks: BackgroundTasks):
     job_id = uuid.uuid4().hex[:16]
     _jobs_set(job_id, {"status": "pending", "job_id": job_id, "bbox": bbox,
                        "layers": layers, "img_fonte": img_fonte, "osm_zoom": osm_zoom,
-                       "img_preview_id": img_preview_id})
+                       "img_preview_id": img_preview_id, "aplicar_onion": aplicar_onion})
     _bbox_cache_set(cache_key, job_id)
     _log.info("Job criado", extra={"job_id": job_id, "layers": layers,
-                                   "img_fonte": img_fonte, "osm_zoom": osm_zoom})
+                                   "img_fonte": img_fonte, "osm_zoom": osm_zoom,
+                                   "aplicar_onion": aplicar_onion})
 
     if USE_CELERY and _celery_task:
         _celery_task.apply_async(
-            args=[job_id, bbox, layers, img_fonte, osm_zoom, img_preview_id],
+            args=[job_id, bbox, layers, img_fonte, osm_zoom, img_preview_id, aplicar_onion],
             task_id=job_id
         )
     else:
         background_tasks.add_task(
             _run_job_async, job_id, tuple(bbox), layers,
-            img_fonte, osm_zoom, img_preview_id
+            img_fonte, osm_zoom, img_preview_id, aplicar_onion
         )
 
     return JobStatus(job_id=job_id, status="pending", bbox=bbox, layers=layers)

@@ -41,6 +41,7 @@ def executar(
     img_fonte: str = "sentinel2",   # "sentinel2" | "osm" | "mbtiles"
     osm_zoom: int  = 15,
     img_preview_id: str = None,     # usado quando img_fonte="mbtiles"
+    aplicar_onion: bool = True,     # efeito cebola urbano no .sol
     progress_cb=None,
 ) -> dict:
     t0 = time.monotonic()
@@ -93,6 +94,7 @@ def executar(
                 bbox=bbox, output_dir=str(job_dir),
                 mapbiomas_tif=mapbiomas_tif,
                 reclassificacao_csv=reclassificacao_csv,
+                aplicar_onion=aplicar_onion,
                 progress_cb=_cb,
             )
             arquivos_gerados.append(sol_path)

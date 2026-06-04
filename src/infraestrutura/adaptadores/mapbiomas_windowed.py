@@ -121,6 +121,7 @@ def _abrir_mapbiomas(mapbiomas_tif: str):
 
 def process(bbox: tuple, output_dir: str,
             mapbiomas_tif: str, reclassificacao_csv: str,
+            aplicar_onion: bool = True,
             progress_cb=None) -> tuple[str, str]:
     """
     Gera .sol + .pal a partir do MapBiomas para o bbox.
@@ -232,9 +233,9 @@ def process(bbox: tuple, output_dir: str,
 
     clutter = reclassifica_clutter(dst_arr, tabela)
 
-    # Efeito cebola urbano
+    # Efeito cebola urbano (opcional)
     urban_antes = int(np.sum(clutter == 2))
-    if urban_antes > 0:
+    if aplicar_onion and urban_antes > 0:
         if progress_cb:
             progress_cb(f"[MapBiomas] Aplicando efeito cebola urbano "
                         f"({urban_antes}px urban 8m, aneis de 300m = 10px)...")
@@ -244,6 +245,10 @@ def process(bbox: tuple, output_dir: str,
             progress_cb(f"[MapBiomas] Urban: 8m={st['urban_8m']}px  "
                         f"15m={st['urban_15m']}px  30m={st['urban_30m']}px  "
                         f"50m={st['urban_50m']}px")
+    elif not aplicar_onion:
+        if progress_cb:
+            progress_cb(f"[MapBiomas] Efeito cebola desativado "
+                        f"({urban_antes}px urban 8m mantidos como urban_8m)")
     else:
         if progress_cb:
             progress_cb("[MapBiomas] Nenhuma area urbana encontrada no bbox")

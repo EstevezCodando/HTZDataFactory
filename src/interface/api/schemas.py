@@ -13,6 +13,7 @@ class JobRequest(BaseModel):
     img_fonte: str = "sentinel2"       # "sentinel2" | "osm" | "mbtiles"
     osm_zoom:  int = 15                # zoom OSM (12-17; só usado quando img_fonte="osm")
     img_preview_id: Optional[str] = None  # obrigatório quando img_fonte="mbtiles"
+    aplicar_onion: bool = True         # aplica efeito cebola urbano no .sol
 
     @field_validator("bbox")
     @classmethod

@@ -914,16 +914,24 @@
           <div class="section">
             <div class="label">Área de interesse</div>
             <div id="bbox-display">Desenhe um retângulo no mapa</div>
-            <div class="chips" id="layer-chips" style="margin-bottom: 10px">
+            <div class="chips" id="layer-chips" style="margin-bottom: 6px">
               <div class="chip active" data-layer="geo">
                 FABDEM 2022<small>.geo — terreno 30m</small>
               </div>
               <div class="chip active" data-layer="sol">
-                MapBiomas 2023<small>.sol + .pal — clutter 30m</small>
+                MapBiomas 2023<small>.sol — clutter 30m</small>
               </div>
               <div class="chip active" data-layer="img">
                 Imagem<small>.img — 15m</small>
               </div>
+            </div>
+            <!-- ── Opção efeito cebola (visível apenas quando .sol ativo) ── -->
+            <div id="onion-gerar-row" style="display:flex; align-items:center; gap:6px; margin: 0 0 10px 2px; font-size:12px; color:#556;">
+              <input type="checkbox" id="cb-onion-gerar" checked style="cursor:pointer;" />
+              <label for="cb-onion-gerar" style="cursor:pointer; user-select:none;">
+                Aplicar efeito cebola urbano no clutter
+                <span style="color:#999; font-size:11px;">(expande urbano 8m → 15m → 30m → 50m por anéis de 300m)</span>
+              </label>
             </div>
             <!-- ── Painel de fonte de imagem ───────────────────────────── -->
             <div id="img-fonte-panel" style="margin: 2px 0 10px 0; font-size: 12px; color: #333; border: 1px solid #dde; border-radius: 6px; padding: 8px 10px; background: #f8f9ff;">
@@ -2411,6 +2419,12 @@ with rasterio.open(
         }
       }
 
+      // ── Visibilidade do checkbox efeito cebola ────────────────────────────────
+      function _syncOnionRow() {
+        const row = document.getElementById("onion-gerar-row");
+        if (row) row.style.display = activeLayers.has("sol") ? "flex" : "none";
+      }
+
       // ── Chips ──────────────────────────────────────────────────────────────────
       function _syncImgFontePanel() {
         const imgAtivo  = activeLayers.has("img");
@@ -2439,8 +2453,11 @@ with rasterio.open(
             this.classList.add("active");
           }
           _syncImgFontePanel();
+          _syncOnionRow();
         });
       });
+
+      _syncOnionRow();
 
       // Reage à mudança de fonte
       document.querySelectorAll('input[name="img_fonte"]').forEach((r) => {
@@ -2640,12 +2657,14 @@ with rasterio.open(
             const imgFonteApi  = isTile ? "mbtiles" : "sentinel2";
             const imgPreviewId = isTile ? _previewState.id : null;
 
+            const aplicarOnion = document.getElementById("cb-onion-gerar")?.checked ?? true;
             const payload = {
               bbox: currentBbox,
               layers,
               img_fonte:      imgFonteApi,
               osm_zoom:       zoom,
               img_preview_id: imgPreviewId,
+              aplicar_onion:  aplicarOnion,
             };
 
             const resp = await fetch(`${API}/jobs`, {
