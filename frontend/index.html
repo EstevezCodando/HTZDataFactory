@@ -924,65 +924,81 @@
                 Imagem<small>.img — 15m</small>
               </div>
             </div>
-            <div
-              id="img-fonte-sel"
-              style="
-                margin: -4px 0 10px 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12px;
-                color: #555;
-              "
-            >
-              <span style="font-weight: 600">Fonte .img:</span>
-              <label
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 3px;
-                  cursor: pointer;
-                "
-              >
-                <input
-                  type="radio"
-                  name="img_fonte"
-                  value="sentinel2"
-                  checked
-                />
-                Sentinel-2
-              </label>
-              <label
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 3px;
-                  cursor: pointer;
-                "
-              >
-                <input type="radio" name="img_fonte" value="osm" />
-                OpenStreetMap
-              </label>
-              <span
-                id="osm-zoom-wrap"
-                style="display: none; align-items: center; gap: 4px"
-              >
-                zoom
-                <select
-                  id="osm-zoom"
-                  style="
-                    font-size: 12px;
-                    padding: 1px 4px;
-                    border: 1px solid #ccc;
-                    border-radius: 3px;
-                  "
-                >
+            <!-- ── Painel de fonte de imagem ───────────────────────────── -->
+            <div id="img-fonte-panel" style="margin: 2px 0 10px 0; font-size: 12px; color: #333; border: 1px solid #dde; border-radius: 6px; padding: 8px 10px; background: #f8f9ff;">
+              <div style="font-weight:700; margin-bottom:6px; color:#445;">🛰 Fonte da imagem .img</div>
+
+              <!-- Seletor de fonte -->
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:7px;">
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;">
+                  <input type="radio" name="img_fonte" value="sentinel2" checked /> Sentinel-2
+                </label>
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;">
+                  <input type="radio" name="img_fonte" value="google_satellite" /> Google Satellite
+                </label>
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;">
+                  <input type="radio" name="img_fonte" value="bing_satellite" /> Bing Satellite
+                </label>
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;">
+                  <input type="radio" name="img_fonte" value="osm" /> OpenStreetMap
+                </label>
+              </div>
+
+              <!-- Zoom (oculto para Sentinel-2) -->
+              <div id="tile-zoom-wrap" style="display:none; align-items:center; gap:6px; margin-bottom:7px;">
+                <span>Zoom:</span>
+                <select id="tile-zoom" style="font-size:12px; padding:1px 4px; border:1px solid #ccc; border-radius:3px;">
+                  <option value="12">12 (~38 m/px)</option>
+                  <option value="13">13 (~19 m/px)</option>
                   <option value="14">14 (~9.6 m/px)</option>
                   <option value="15" selected>15 (~4.8 m/px)</option>
                   <option value="16">16 (~2.4 m/px)</option>
+                  <option value="17">17 (~1.2 m/px)</option>
+                  <option value="18">18 (~0.6 m/px)</option>
                 </select>
-              </span>
+                <span id="tile-count-est" style="color:#888; font-size:11px;"></span>
+              </div>
+
+              <!-- Termo de consentimento (oculto para Sentinel-2) -->
+              <div id="tile-consent-wrap" style="display:none; margin-bottom:7px;">
+                <label style="display:flex; align-items:flex-start; gap:6px; cursor:pointer; background:#fff8e1; border:1px solid #f5c518; border-radius:4px; padding:6px 8px;">
+                  <input type="checkbox" id="tile-consent" style="margin-top:2px; flex-shrink:0;" />
+                  <span style="font-size:11px; color:#555; line-height:1.4;">
+                    <strong>Declaração de responsabilidade:</strong>
+                    Sou responsável por garantir autorização para acessar, armazenar e utilizar tiles desta fonte.
+                    O uso de Google Satellite e Bing Satellite está sujeito aos Termos de Serviço de cada provedor.
+                    Esta ferramenta é para uso interno em planejamento de RF.
+                  </span>
+                </label>
+              </div>
+
+              <!-- Botão baixar + barra de progresso -->
+              <div id="tile-preview-section" style="display:none;">
+                <div style="display:flex; gap:6px; align-items:center; margin-bottom:5px;">
+                  <button id="btn-tile-preview" class="btn btn-secondary" style="font-size:12px; padding:4px 10px;">
+                    ⬇ Baixar e pré-visualizar
+                  </button>
+                  <span id="tile-preview-status" style="font-size:11px; color:#666;"></span>
+                </div>
+                <div id="tile-progress-wrap" style="display:none; margin-bottom:6px;">
+                  <progress id="tile-progress" value="0" max="100" style="width:100%; height:10px;"></progress>
+                  <span id="tile-progress-label" style="font-size:11px; color:#555;"></span>
+                </div>
+                <!-- Confirmação (aparece após download concluído) -->
+                <div id="tile-confirm-wrap" style="display:none;">
+                  <button id="btn-tile-confirm" class="btn" style="font-size:12px; padding:4px 10px; background:#2a7; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                    ✔ Usar esta imagem para gerar .img
+                  </button>
+                  <span id="tile-confirm-status" style="font-size:11px; color:#2a7; margin-left:6px;"></span>
+                </div>
+              </div>
+
+              <!-- Sentinel-2: info simples -->
+              <div id="sentinel-info" style="font-size:11px; color:#667; margin-top:2px;">
+                Download automático durante a geração do job (Planetary Computer STAC).
+              </div>
             </div>
+
             <button class="btn btn-primary" id="btn-gerar" disabled>
               Gerar
             </button>
@@ -2088,6 +2104,9 @@ with rasterio.open(
         bd.textContent = `W ${currentBbox[0]}  S ${currentBbox[1]}  E ${currentBbox[2]}  N ${currentBbox[3]}`;
         bd.classList.add("set");
         document.getElementById("btn-gerar").disabled = false;
+        // Limpa preview anterior e reestima tiles ao mudar bbox
+        _clearPreview();
+        _estimateTileCount();
       });
       map.on(L.Draw.Event.DELETED, () => resetBbox());
 
@@ -2320,12 +2339,91 @@ with rasterio.open(
         }
       }
 
+      // ── Estado do preview de tiles ──────────────────────────────────────────
+      let _previewState = {
+        id: null,         // preview_id
+        source: null,     // "google_satellite" etc.
+        zoom: null,
+        bboxKey: null,    // chave de cache: "{fonte}_{zoom}_{bbox}"
+        layer: null,      // L.tileLayer no mapa
+        confirmed: false, // usuário clicou "Usar esta imagem"
+        polling: null,    // setInterval handle
+      };
+
+      /** Chave de cache única para fonte+zoom+bbox */
+      function _previewCacheKey(fonte, zoom, bbox) {
+        return `${fonte}_${zoom}_${bbox ? bbox.map(v => v.toFixed(3)).join(',') : ''}`;
+      }
+
+      /** Remove camada do mapa e limpa estado sem apagar o ID do servidor */
+      function _clearPreviewLayer() {
+        if (_previewState.layer) {
+          map.removeLayer(_previewState.layer);
+          _previewState.layer = null;
+        }
+        if (_previewState.polling) {
+          clearInterval(_previewState.polling);
+          _previewState.polling = null;
+        }
+      }
+
+      /** Reset completo — chamado ao trocar bbox ou fonte */
+      function _clearPreview() {
+        _clearPreviewLayer();
+        _previewState.id        = null;
+        _previewState.source    = null;
+        _previewState.zoom      = null;
+        _previewState.bboxKey   = null;
+        _previewState.confirmed = false;
+        document.getElementById("tile-progress-wrap").style.display  = "none";
+        document.getElementById("tile-confirm-wrap").style.display   = "none";
+        document.getElementById("tile-preview-status").textContent   = "";
+        document.getElementById("tile-confirm-status").textContent   = "";
+        document.getElementById("tile-progress").value               = 0;
+        document.getElementById("tile-progress-label").textContent   = "";
+      }
+
+      /** Adiciona a camada de tiles de um preview já concluído ao mapa */
+      function _addPreviewLayer(previewId, nativeZoom, sourceName) {
+        _clearPreviewLayer();
+        // ?v=... quebra cache do browser para tiles que podem ter retornado 204
+        const bust = Date.now();
+        _previewState.layer = L.tileLayer(
+          `${API}/img/preview/${previewId}/tile/{z}/{x}/{y}?v=${bust}`,
+          {
+            // minNativeZoom/maxNativeZoom dizem ao Leaflet que tiles só existem
+            // no zoom de download; ele escala para qualquer zoom do mapa
+            minNativeZoom: nativeZoom,
+            maxNativeZoom: nativeZoom,
+            minZoom: 1,
+            maxZoom: 22,
+            tileSize: 256,
+            attribution: sourceName || "Preview",
+            opacity: 0.88,
+          }
+        ).addTo(map);
+
+        // Zoom do mapa para a área baixada
+        if (currentBbox) {
+          const [w, s, e, n] = currentBbox;
+          map.fitBounds([[s, w], [n, e]], { maxZoom: nativeZoom });
+        }
+      }
+
       // ── Chips ──────────────────────────────────────────────────────────────────
-      function _syncImgFonteSel() {
-        const imgAtivo = activeLayers.has("img");
-        const sel = document.getElementById("img-fonte-sel");
-        sel.style.opacity = imgAtivo ? "1" : "0.35";
-        sel.style.pointerEvents = imgAtivo ? "" : "none";
+      function _syncImgFontePanel() {
+        const imgAtivo  = activeLayers.has("img");
+        const panel     = document.getElementById("img-fonte-panel");
+        panel.style.opacity       = imgAtivo ? "1" : "0.4";
+        panel.style.pointerEvents = imgAtivo ? "" : "none";
+
+        const fonte    = document.querySelector('input[name="img_fonte"]:checked')?.value || "sentinel2";
+        const isTile   = fonte !== "sentinel2";
+
+        document.getElementById("tile-zoom-wrap").style.display    = isTile ? "flex" : "none";
+        document.getElementById("tile-consent-wrap").style.display = isTile ? "block" : "none";
+        document.getElementById("tile-preview-section").style.display = isTile ? "block" : "none";
+        document.getElementById("sentinel-info").style.display     = isTile ? "none" : "block";
       }
 
       document.querySelectorAll(".chip").forEach((chip) => {
@@ -2339,18 +2437,144 @@ with rasterio.open(
             activeLayers.add(layer);
             this.classList.add("active");
           }
-          _syncImgFonteSel();
+          _syncImgFontePanel();
         });
       });
 
-      // Mostra/esconde seletor de zoom OSM
+      // Reage à mudança de fonte
       document.querySelectorAll('input[name="img_fonte"]').forEach((r) => {
-        r.addEventListener("change", function () {
-          const zw = document.getElementById("osm-zoom-wrap");
-          zw.style.display = this.value === "osm" ? "flex" : "none";
+        r.addEventListener("change", () => {
+          _clearPreview();
+          _syncImgFontePanel();
         });
       });
-      _syncImgFonteSel();
+
+      // Estima contagem de tiles localmente (sem chamada à API)
+      function _estimateTileCount() {
+        const fonte = document.querySelector('input[name="img_fonte"]:checked')?.value;
+        if (!fonte || fonte === "sentinel2" || !currentBbox) return;
+        const zoom = parseInt(document.getElementById("tile-zoom").value || "15");
+        const lbl  = document.getElementById("tile-count-est");
+        const [w, s, e, n] = currentBbox;
+        // Cálculo aproximado: tiles que cobrem o bbox + margem
+        const n2z    = 1 << zoom;
+        const tilesX = Math.ceil((e - w) / 360 * n2z) + 2;
+        const tilesY = Math.ceil((n - s) / 180 * n2z) + 2;
+        const total  = tilesX * tilesY;
+        lbl.textContent = total > 4000
+          ? `⚠ ≈${total} tiles (reduza zoom ou área)`
+          : `≈${total} tiles`;
+        lbl.style.color = total > 4000 ? "#c00" : "#888";
+      }
+      document.getElementById("tile-zoom").addEventListener("change", _estimateTileCount);
+
+      // ── Botão "Baixar e pré-visualizar" ──────────────────────────────────────
+      document.getElementById("btn-tile-preview").addEventListener("click", async function () {
+        const fonte   = document.querySelector('input[name="img_fonte"]:checked')?.value;
+        const zoom    = parseInt(document.getElementById("tile-zoom").value || "15");
+        const consent = document.getElementById("tile-consent").checked;
+
+        if (!currentBbox) { alert("Selecione uma área no mapa primeiro."); return; }
+        if (!consent) { alert("Aceite os termos de responsabilidade para continuar."); return; }
+
+        // ── Cache: mesma fonte+zoom+bbox já baixada? ──────────────────────────
+        const cacheKey = _previewCacheKey(fonte, zoom, currentBbox);
+        if (_previewState.id && _previewState.bboxKey === cacheKey) {
+          // Verifica status no servidor antes de reusar
+          try {
+            const sr = await fetch(`${API}/img/preview/${_previewState.id}/status`,
+                                   { cache: "no-store" });
+            if (sr.ok) {
+              const st = await sr.json();
+              if (st.status === "done") {
+                // Já existe — só recarrega a camada no mapa
+                document.getElementById("tile-preview-status").textContent =
+                  `✔ Tiles já baixados (${st.done} tiles) — reutilizando`;
+                _addPreviewLayer(_previewState.id, zoom, st.source_name);
+                document.getElementById("tile-confirm-wrap").style.display = "block";
+                document.getElementById("tile-progress-wrap").style.display = "block";
+                document.getElementById("tile-progress").value = 100;
+                document.getElementById("tile-progress-label").textContent =
+                  `${st.done}/${st.total} tiles (100%)`;
+                return;
+              }
+            }
+          } catch (_) {}
+          // Se falhou a verificação, segue com novo download
+        }
+
+        // ── Novo download ─────────────────────────────────────────────────────
+        _clearPreview();
+        document.getElementById("tile-preview-status").textContent = "Iniciando download...";
+        document.getElementById("tile-progress-wrap").style.display = "block";
+        this.disabled = true;
+
+        try {
+          const resp = await fetch(`${API}/img/preview`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              bbox: currentBbox, source_id: fonte,
+              zoom, accepted_terms: true,
+            }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            document.getElementById("tile-preview-status").textContent =
+              `Erro: ${data.detail || resp.status}`;
+            this.disabled = false;
+            return;
+          }
+
+          _previewState.id      = data.preview_id;
+          _previewState.source  = fonte;
+          _previewState.zoom    = zoom;
+          _previewState.bboxKey = cacheKey;
+
+          // Polling de progresso
+          _previewState.polling = setInterval(async () => {
+            try {
+              const sr = await fetch(`${API}/img/preview/${_previewState.id}/status`,
+                                     { cache: "no-store" });
+              const st = await sr.json();
+
+              const pct = st.percent || 0;
+              document.getElementById("tile-progress").value = pct;
+              document.getElementById("tile-progress-label").textContent =
+                `${st.done}/${st.total} tiles (${pct.toFixed(1)}%)`;
+              document.getElementById("tile-preview-status").textContent =
+                st.status === "running" ? `Baixando ${st.source_name}...` :
+                st.status === "done"    ? `✔ ${st.done} tiles baixados` :
+                st.status === "error"   ? `✖ Erro: ${st.error}` : st.status;
+
+              if (st.status === "done" || st.status === "error") {
+                clearInterval(_previewState.polling);
+                _previewState.polling = null;
+                document.getElementById("btn-tile-preview").disabled = false;
+
+                if (st.status === "done") {
+                  _addPreviewLayer(_previewState.id, zoom, st.source_name);
+                  document.getElementById("tile-confirm-wrap").style.display = "block";
+                }
+              }
+            } catch (_) {}
+          }, 1000);
+        } catch (e) {
+          document.getElementById("tile-preview-status").textContent = `Erro: ${e.message}`;
+          this.disabled = false;
+        }
+      });
+
+      // ── Botão "Confirmar e usar esta imagem" ──────────────────────────────────
+      document.getElementById("btn-tile-confirm").addEventListener("click", function () {
+        if (!_previewState.id) return;
+        _previewState.confirmed = true;
+        this.disabled = true;
+        document.getElementById("tile-confirm-status").textContent =
+          "✔ Imagem confirmada — clique em Gerar para converter em .img";
+      });
+
+      _syncImgFontePanel();
 
       // ── Log ────────────────────────────────────────────────────────────────────
       function classForLine(l) {
@@ -2396,18 +2620,31 @@ with rasterio.open(
           lastLogLen = 0;
 
           try {
-            const imgFonte =
-              document.querySelector('input[name="img_fonte"]:checked')
-                ?.value || "sentinel2";
-            const osmZoom = parseInt(
-              document.getElementById("osm-zoom")?.value || "15",
-              10,
-            );
+            const fonteRaw = document.querySelector('input[name="img_fonte"]:checked')?.value || "sentinel2";
+            const zoom     = parseInt(document.getElementById("tile-zoom")?.value || "15", 10);
+
+            // Se fonte de tile externo, valida que o preview foi confirmado
+            const isTile = fonteRaw !== "sentinel2";
+            if (isTile && layers.includes("img")) {
+              if (!_previewState.confirmed || !_previewState.id) {
+                alert("Faça o download e confirme a pré-visualização da imagem antes de gerar.");
+                this.disabled = false;
+                return;
+              }
+            }
+
+            // img_fonte para a API:
+            // - sentinel2 → "sentinel2" (download durante o job)
+            // - qualquer tile externo → "mbtiles" (usa o preview já baixado)
+            const imgFonteApi  = isTile ? "mbtiles" : "sentinel2";
+            const imgPreviewId = isTile ? _previewState.id : null;
+
             const payload = {
               bbox: currentBbox,
               layers,
-              img_fonte: imgFonte,
-              osm_zoom: osmZoom,
+              img_fonte:      imgFonteApi,
+              osm_zoom:       zoom,
+              img_preview_id: imgPreviewId,
             };
 
             const resp = await fetch(`${API}/jobs`, {
@@ -2422,8 +2659,9 @@ with rasterio.open(
               return;
             }
             currentJobId = job.job_id;
-            const fonteLabel =
-              imgFonte === "osm" ? `OSM zoom ${osmZoom}` : "Sentinel-2";
+            const fonteLabel = isTile
+              ? `${fonteRaw} zoom ${_previewState.zoom} (preview ${_previewState.id})`
+              : "Sentinel-2";
             appendLog(logEl, [
               `Job ${job.job_id}`,
               `Camadas: ${layers.join(", ")} | Imagem: ${fonteLabel}`,

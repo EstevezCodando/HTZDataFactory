@@ -31,7 +31,8 @@ class JobTask(Task):
     max_retries=0,
 )
 def gerar_pacote_task(self, job_id: str, bbox: list, layers: list,
-                      img_fonte: str = "sentinel2", osm_zoom: int = 15) -> dict:
+                      img_fonte: str = "sentinel2", osm_zoom: int = 15,
+                      img_preview_id: str = None) -> dict:
     """
     Executa o pipeline HTZ em worker Celery dedicado.
     Progresso enviado via update_state para consulta via GET /jobs/{id}.
@@ -61,6 +62,7 @@ def gerar_pacote_task(self, job_id: str, bbox: list, layers: list,
         reclassificacao_csv=RECLASSIFICACAO_CSV,
         img_fonte=img_fonte,
         osm_zoom=osm_zoom,
+        img_preview_id=img_preview_id,
         progress_cb=progress_cb,
     )
 

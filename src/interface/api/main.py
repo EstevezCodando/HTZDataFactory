@@ -27,7 +27,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .schemas import JobRequest, JobStatus, JobListItem
+from .schemas import JobRequest, JobStatus, JobListItem, PreviewRequest
 from src.infraestrutura.logging.setup import setup_logging, get_logger
 from src.infraestrutura.persistencia.audit_jsonl import AuditJsonl
 
@@ -64,9 +64,13 @@ if USE_CELERY:
         _log.warning("Celery nao disponivel, usando asyncio", extra={"reason": str(e)})
         USE_CELERY = False
 
+# ── Pasta de previews MBTiles ─────────────────────────────────────────────────
+_PREVIEWS_DIR = os.path.join(OUTPUT_DIR, "_img_previews")
+
 # ── Estado em memória — protegido por lock ────────────────────────────────────
 _lock:       threading.Lock         = threading.Lock()
 _jobs:       dict[str, dict]        = {}
+_previews:   dict[str, dict]        = {}   # {preview_id: {status, total, done, ...}}
 _bbox_cache: OrderedDict[str, str]  = OrderedDict()   # LRU com tamanho máximo
 _BBOX_CACHE_MAX = 500
 _semaforo:   asyncio.Semaphore      = None
@@ -203,7 +207,8 @@ async def log_requests(request: Request, call_next):
 
 # ── Background worker asyncio (fallback sem Celery) ──────────────────────────
 def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
-                  img_fonte: str = "sentinel2", osm_zoom: int = 15):
+                  img_fonte: str = "sentinel2", osm_zoom: int = 15,
+                  img_preview_id: str = None):
     from src.aplicacao.casos_uso.gerar_pacote_htz import executar
     _jobs_update(job_id, {"status": "running"})
     try:
@@ -216,6 +221,7 @@ def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
             reclassificacao_csv=RECLASSIFICACAO_CSV,
             img_fonte=img_fonte,
             osm_zoom=osm_zoom,
+            img_preview_id=img_preview_id,
             progress_cb=None,
         )
         _jobs_update(job_id, resultado)
@@ -225,13 +231,16 @@ def _run_job_sync(job_id: str, bbox: tuple, layers: list[str],
 
 
 async def _run_job_async(job_id: str, bbox: tuple, layers: list[str],
-                         img_fonte: str = "sentinel2", osm_zoom: int = 15):
+                         img_fonte: str = "sentinel2", osm_zoom: int = 15,
+                         img_preview_id: str = None):
     async with _semaforo:
         loop = asyncio.get_event_loop()
         try:
             await asyncio.wait_for(
-                loop.run_in_executor(None, _run_job_sync, job_id, bbox, layers,
-                                     img_fonte, osm_zoom),
+                loop.run_in_executor(
+                    None, _run_job_sync, job_id, bbox, layers,
+                    img_fonte, osm_zoom, img_preview_id
+                ),
                 timeout=3600,
             )
         except asyncio.TimeoutError:
@@ -343,10 +352,24 @@ def status_dados():
 @app.post("/jobs", response_model=JobStatus, status_code=202)
 async def criar_job(request: JobRequest, background_tasks: BackgroundTasks):
     """Cria um job de geração de pacote HTZ."""
-    bbox      = list(request.bbox)
-    layers    = request.layers
-    img_fonte = request.img_fonte
-    osm_zoom  = request.osm_zoom
+    bbox            = list(request.bbox)
+    layers          = request.layers
+    img_fonte       = request.img_fonte
+    osm_zoom        = request.osm_zoom
+    img_preview_id  = request.img_preview_id
+
+    # Valida que o preview existe quando img_fonte="mbtiles"
+    if img_fonte == "mbtiles":
+        if not img_preview_id:
+            raise HTTPException(422, "img_preview_id obrigatório quando img_fonte='mbtiles'")
+        with _lock:
+            p = _previews.get(img_preview_id)
+        if not p:
+            raise HTTPException(404, f"Preview '{img_preview_id}' não encontrado. "
+                                      "Faça o download primeiro via POST /img/preview")
+        if p.get("status") != "done":
+            raise HTTPException(422, f"Preview ainda não concluído (status: {p.get('status')}). "
+                                      "Aguarde o download terminar.")
 
     status = status_dados()
     for layer in layers:
@@ -362,7 +385,7 @@ async def criar_job(request: JobRequest, background_tasks: BackgroundTasks):
         cached_id = _bbox_cache.get(cache_key)
         cached    = _jobs.get(cached_id, {}) if cached_id else {}
 
-    if cached_id and cached.get("status") == "done":
+    if cached_id and cached.get("status") == "done" and img_fonte != "mbtiles":
         _log.info("Cache hit", extra={"cache_key": cache_key, "job_id": cached_id})
         return JobStatus(
             job_id=cached_id, status="done",
@@ -373,15 +396,22 @@ async def criar_job(request: JobRequest, background_tasks: BackgroundTasks):
 
     job_id = uuid.uuid4().hex[:16]
     _jobs_set(job_id, {"status": "pending", "job_id": job_id, "bbox": bbox,
-                       "layers": layers, "img_fonte": img_fonte, "osm_zoom": osm_zoom})
+                       "layers": layers, "img_fonte": img_fonte, "osm_zoom": osm_zoom,
+                       "img_preview_id": img_preview_id})
     _bbox_cache_set(cache_key, job_id)
     _log.info("Job criado", extra={"job_id": job_id, "layers": layers,
                                    "img_fonte": img_fonte, "osm_zoom": osm_zoom})
 
     if USE_CELERY and _celery_task:
-        _celery_task.apply_async(args=[job_id, bbox, layers, img_fonte, osm_zoom], task_id=job_id)
+        _celery_task.apply_async(
+            args=[job_id, bbox, layers, img_fonte, osm_zoom, img_preview_id],
+            task_id=job_id
+        )
     else:
-        background_tasks.add_task(_run_job_async, job_id, tuple(bbox), layers, img_fonte, osm_zoom)
+        background_tasks.add_task(
+            _run_job_async, job_id, tuple(bbox), layers,
+            img_fonte, osm_zoom, img_preview_id
+        )
 
     return JobStatus(job_id=job_id, status="pending", bbox=bbox, layers=layers)
 
@@ -693,6 +723,183 @@ def tiles_fabdem():
         "downloaded": disponiveis,
         "features":   features_out,
     }
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENDPOINTS DE PRÉ-VISUALIZAÇÃO DE IMAGEM (tile download interativo)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/img/sources")
+def img_sources():
+    """Lista as fontes de tiles disponíveis (sem URLs de template)."""
+    from src.infraestrutura.adaptadores.tile_downloader import list_sources, DISCLAIMER
+    return {
+        "sources":    list_sources(),
+        "disclaimer": DISCLAIMER,
+    }
+
+
+@app.post("/img/preview", status_code=202)
+async def img_preview_create(req: PreviewRequest):
+    """
+    Inicia o download de tiles para pré-visualização no mapa.
+    Retorna preview_id imediatamente; polling em GET /img/preview/{id}/status.
+    """
+    from src.infraestrutura.adaptadores import tile_downloader
+
+    src = tile_downloader.SOURCES.get(req.source_id)
+    if not src:
+        raise HTTPException(400, f"Fonte desconhecida: '{req.source_id}'")
+
+    zoom = req.zoom
+    z_min, z_max = src["zoom_min"], src["zoom_max"]
+    if not (z_min <= zoom <= z_max):
+        raise HTTPException(400, f"Zoom {zoom} fora do range [{z_min}, {z_max}]")
+
+    # Estima número de tiles antes de iniciar
+    try:
+        n = tile_downloader._count_tiles(tuple(req.bbox), zoom)
+    except Exception:
+        n = 0
+    if n > 4000:
+        raise HTTPException(400,
+            f"Área solicita ~{n} tiles. Reduza a área ou o zoom (máximo: 4000).")
+
+    preview_id  = uuid.uuid4().hex[:16]
+    mbtiles_path = os.path.join(_PREVIEWS_DIR, f"{preview_id}.mbtiles")
+    os.makedirs(_PREVIEWS_DIR, exist_ok=True)
+
+    with _lock:
+        _previews[preview_id] = {
+            "status":      "pending",
+            "source_id":   req.source_id,
+            "source_name": src["name"],
+            "zoom":        zoom,
+            "bbox":        req.bbox,
+            "total":       n,
+            "done":        0,
+            "failed":      0,
+            "mbtiles":     mbtiles_path,
+            "error":       None,
+        }
+
+    def _run():
+        with _lock:
+            _previews[preview_id]["status"] = "running"
+
+        def _cb(msg: str):
+            # Extrai progresso de mensagens como "[Tiles] 45/100 ..."
+            if "/" in msg and "Tiles" in msg:
+                try:
+                    parts = msg.split()
+                    for p in parts:
+                        if "/" in p:
+                            d, t = p.split("/")
+                            with _lock:
+                                _previews[preview_id]["done"]  = int(d)
+                                _previews[preview_id]["total"] = int(t)
+                            break
+                except Exception:
+                    pass
+
+        try:
+            result = tile_downloader.download(
+                bbox=tuple(req.bbox),
+                source_id=req.source_id,
+                zoom=zoom,
+                output_path=mbtiles_path,
+                max_tiles=4000,
+                progress_cb=_cb,
+            )
+            with _lock:
+                _previews[preview_id].update({
+                    "status":  "done",
+                    "done":    result["downloaded"],
+                    "failed":  result["failed"],
+                    "total":   result["total"],
+                })
+        except Exception as exc:
+            _log.error("Preview falhou", extra={"preview_id": preview_id, "erro": str(exc)})
+            with _lock:
+                _previews[preview_id].update({
+                    "status": "error",
+                    "error":  "Falha no download de tiles.",
+                })
+
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _run)
+
+    return {
+        "preview_id":  preview_id,
+        "source_name": src["name"],
+        "zoom":        zoom,
+        "total_tiles": n,
+    }
+
+
+@app.get("/img/preview/{preview_id}/status")
+def img_preview_status(preview_id: str):
+    """Retorna o progresso do download de tiles."""
+    with _lock:
+        p = _previews.get(preview_id)
+    if not p:
+        raise HTTPException(404, "Preview não encontrado")
+    return {
+        "preview_id":  preview_id,
+        "status":      p["status"],
+        "source_name": p.get("source_name", ""),
+        "zoom":        p.get("zoom"),
+        "total":       p.get("total", 0),
+        "done":        p.get("done", 0),
+        "failed":      p.get("failed", 0),
+        "error":       p.get("error"),
+        "percent":     round(100 * p.get("done", 0) / max(p.get("total", 1), 1), 1),
+    }
+
+
+@app.get("/img/preview/{preview_id}/tile/{z}/{x}/{y}")
+def img_preview_tile(preview_id: str, z: int, x: int, y: int):
+    """Serve um tile do MBTiles para renderização no Leaflet."""
+    from fastapi.responses import Response
+    from src.infraestrutura.adaptadores.tile_downloader import serve_tile, get_metadata
+
+    with _lock:
+        p = _previews.get(preview_id)
+    if not p:
+        raise HTTPException(404, "Preview não encontrado")
+
+    mbtiles_path = p.get("mbtiles", "")
+    if not os.path.exists(mbtiles_path):
+        raise HTTPException(404, "MBTiles não disponível")
+
+    data = serve_tile(mbtiles_path, z, x, y)
+    if not data:
+        # 404 para tile ausente — browsers não cacheiam 404 como cacheiam 204
+        raise HTTPException(404, "Tile não disponível neste zoom/coordenada")
+
+    # Detecta Content-Type pelo magic dos bytes
+    ct = "image/png" if data[:4] == b"\x89PNG" else "image/jpeg"
+    return Response(content=data, media_type=ct,
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.delete("/img/preview/{preview_id}", status_code=204)
+def img_preview_delete(preview_id: str):
+    """Remove preview e apaga o arquivo MBTiles."""
+    import re
+    if not re.fullmatch(r"[0-9a-f]{16}", preview_id):
+        raise HTTPException(400, "preview_id inválido")
+
+    with _lock:
+        p = _previews.pop(preview_id, None)
+
+    if p and p.get("mbtiles"):
+        try:
+            Path(p["mbtiles"]).unlink(missing_ok=True)
+        except Exception:
+            pass
+    return None
 
 
 @app.get("/tiles/mapbiomas")

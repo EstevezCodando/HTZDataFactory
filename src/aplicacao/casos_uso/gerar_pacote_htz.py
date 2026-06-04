@@ -16,7 +16,7 @@ from src.dominio.area_interesse.entidades import AreaInteresse
 from src.dominio.auditoria.entidades import Evento
 from src.infraestrutura.logging.setup import JobLogger
 from src.infraestrutura.persistencia.audit_jsonl import AuditJsonl
-from src.infraestrutura.adaptadores import fabdem_rasterio, mapbiomas_windowed, sentinel_stac, osm_tiles
+from src.infraestrutura.adaptadores import fabdem_rasterio, mapbiomas_windowed, sentinel_stac, osm_tiles, mbtiles_to_img
 
 _log = logging.getLogger("htz.caso_uso.gerar_pacote")
 
@@ -38,8 +38,9 @@ def executar(
     fabdem_dir: str,
     mapbiomas_tif: str,
     reclassificacao_csv: str,
-    img_fonte: str = "sentinel2",   # "sentinel2" | "osm"
+    img_fonte: str = "sentinel2",   # "sentinel2" | "osm" | "mbtiles"
     osm_zoom: int  = 15,
+    img_preview_id: str = None,     # usado quando img_fonte="mbtiles"
     progress_cb=None,
 ) -> dict:
     t0 = time.monotonic()
@@ -100,10 +101,25 @@ def executar(
             log_evento("mapbiomas", arquivo=Path(sol_path).name, bytes=sz, **urban_stats)
             _log.info("MapBiomas gerado", extra={"job_id": job_id, "bytes": sz, **urban_stats})
 
-        # ── 3. Imagem → .img + .pal (Sentinel-2 ou OSM) ─────────────────
+        # ── 3. Imagem → .img + .pal (Sentinel-2, OSM ou MBTiles preview) ───
         # .pal é exclusivo do .img — gerado sempre que .img for solicitado
         if "img" in layers:
-            if img_fonte == "osm":
+            if img_fonte == "mbtiles":
+                _cb("=== [3/3] Gerando imagem .img (MBTiles — pré-visualização confirmada) ===")
+                previews_dir = Path(output_dir) / "_img_previews"
+                mbtiles_path = str(previews_dir / f"{img_preview_id}.mbtiles")
+                img_path, img_pal_path = mbtiles_to_img.process(
+                    mbtiles_path=mbtiles_path, bbox=bbox,
+                    output_dir=str(job_dir), grade=grade, progress_cb=_cb,
+                )
+                arquivos_gerados += [img_path, img_pal_path]
+                sz = os.path.getsize(img_path)
+                log_evento("mbtiles_img", arquivo=Path(img_path).name, bytes=sz,
+                           preview_id=img_preview_id)
+                _log.info("MBTiles IMG gerado", extra={"job_id": job_id, "bytes": sz,
+                                                        "preview_id": img_preview_id})
+                meta_sentinel = {"fonte": "mbtiles", "preview_id": img_preview_id}
+            elif img_fonte == "osm":
                 _cb(f"=== [3/3] Gerando imagem .img (OpenStreetMap zoom {osm_zoom}) ===")
                 img_path, img_pal_path = osm_tiles.process(
                     bbox=bbox, output_dir=str(job_dir),
