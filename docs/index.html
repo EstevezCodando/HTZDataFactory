@@ -99,10 +99,72 @@
   /* ── MERMAID WRAPPER ── */
   .mermaid-wrap {
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 24px; margin: 16px 0 28px;
-    overflow-x: auto; text-align: center;
+    border-radius: 10px; padding: 16px; margin: 16px 0 28px;
+    position: relative; overflow: hidden;
   }
-  .mermaid-wrap .mermaid { display: inline-block; }
+  .mermaid-wrap .mermaid-inner {
+    overflow: auto; max-height: 520px; text-align: center;
+    cursor: grab; user-select: none;
+  }
+  .mermaid-wrap .mermaid-inner:active { cursor: grabbing; }
+  .mermaid-wrap .mermaid { display: inline-block; min-width: 100%; }
+  .mermaid-wrap svg { max-width: none !important; transition: transform .05s; }
+
+  /* Toolbar dos diagramas */
+  .diagram-toolbar {
+    display: flex; gap: 6px; justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+  .diagram-toolbar button {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text2); font-size: 12px; padding: 3px 9px;
+    border-radius: 5px; cursor: pointer; transition: all .15s;
+  }
+  .diagram-toolbar button:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── MODAL FULLSCREEN ── */
+  #diagram-modal {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.88); backdrop-filter: blur(4px);
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  #diagram-modal.open { display: flex; }
+  #diagram-modal-close {
+    position: absolute; top: 16px; right: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 20px; width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; z-index: 10; transition: background .15s;
+  }
+  #diagram-modal-close:hover { background: var(--surface2); }
+  #diagram-modal-hint {
+    position: absolute; bottom: 16px; color: var(--text2); font-size: 12px;
+  }
+  #diagram-modal-zoom {
+    position: absolute; bottom: 40px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  #diagram-modal-zoom button {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 18px; width: 34px; height: 34px;
+    border-radius: 6px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center;
+  }
+  #diagram-modal-zoom button:hover { background: var(--surface2); }
+  #diagram-modal-canvas {
+    width: 96vw; height: 88vh;
+    overflow: hidden; position: relative;
+    background: var(--surface2); border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  #diagram-modal-canvas .mermaid-clone {
+    display: inline-block;
+    transform-origin: 0 0;
+    cursor: grab;
+    user-select: none;
+    padding: 24px;
+  }
+  #diagram-modal-canvas .mermaid-clone:active { cursor: grabbing; }
 
   /* ── GRID ── */
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
@@ -1357,6 +1419,20 @@ curl -X DELETE http://localhost:8080/cache -H "X-API-Key: SUA_CHAVE"</code></pre
 
 </main>
 
+<!-- ── Modal fullscreen para diagramas ──────────────────────────────────────── -->
+<div id="diagram-modal">
+  <button id="diagram-modal-close" title="Fechar (Esc)">✕</button>
+  <div id="diagram-modal-canvas">
+    <div class="mermaid-clone" id="diagram-modal-content"></div>
+  </div>
+  <div id="diagram-modal-zoom">
+    <button id="zoom-in"  title="Zoom +">＋</button>
+    <button id="zoom-out" title="Zoom −">－</button>
+    <button id="zoom-fit" title="Ajustar">⊡</button>
+  </div>
+  <div id="diagram-modal-hint">Scroll = zoom · Arraste = mover · Esc = fechar</div>
+</div>
+
 <script>
   // ── Mermaid ──────────────────────────────────────────────────────────────────
   mermaid.initialize({
@@ -1383,8 +1459,8 @@ curl -X DELETE http://localhost:8080/cache -H "X-API-Key: SUA_CHAVE"</code></pre
   });
 
   // ── Active nav highlight on scroll ───────────────────────────────────────────
-  const sections  = document.querySelectorAll('section[id]');
-  const navLinks  = document.querySelectorAll('nav a[href^="#"]');
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(e => {
@@ -1395,8 +1471,155 @@ curl -X DELETE http://localhost:8080/cache -H "X-API-Key: SUA_CHAVE"</code></pre
       }
     });
   }, { rootMargin: '-52px 0px -60% 0px', threshold: 0 });
-
   sections.forEach(s => observer.observe(s));
+
+  // ── Toolbar + Fullscreen para cada diagrama ──────────────────────────────────
+  function addDiagramToolbar(wrap) {
+    const inner = document.createElement('div');
+    inner.className = 'mermaid-inner';
+    // Move o .mermaid para dentro do inner
+    const mermaidEl = wrap.querySelector('.mermaid');
+    if (!mermaidEl) return;
+    wrap.insertBefore(inner, mermaidEl);
+    inner.appendChild(mermaidEl);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'diagram-toolbar';
+    toolbar.innerHTML = `
+      <button class="btn-zoom-in"  title="Zoom +">＋</button>
+      <button class="btn-zoom-out" title="Zoom −">－</button>
+      <button class="btn-reset"    title="Reset">↺</button>
+      <button class="btn-full"     title="Tela cheia">⛶ Ampliar</button>`;
+    wrap.insertBefore(toolbar, inner);
+
+    // Estado de zoom inline
+    let scale = 1, tx = 0, ty = 0, dragging = false, lx = 0, ly = 0;
+
+    function applyTransform(svg) {
+      if (svg) svg.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+    function getSvg() { return inner.querySelector('svg'); }
+
+    // Zoom com roda dentro do inner
+    inner.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const f = e.deltaY < 0 ? 1.12 : 0.89;
+      scale = Math.max(0.3, Math.min(8, scale * f));
+      applyTransform(getSvg());
+    }, { passive: false });
+
+    // Drag dentro do inner
+    inner.addEventListener('mousedown', (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
+    inner.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      tx += e.clientX - lx; ty += e.clientY - ly;
+      lx = e.clientX; ly = e.clientY;
+      applyTransform(getSvg());
+    });
+    ['mouseup','mouseleave'].forEach(ev => inner.addEventListener(ev, () => dragging = false));
+
+    // Botões da toolbar
+    toolbar.querySelector('.btn-zoom-in').addEventListener('click', () => {
+      scale = Math.min(8, scale * 1.25); applyTransform(getSvg());
+    });
+    toolbar.querySelector('.btn-zoom-out').addEventListener('click', () => {
+      scale = Math.max(0.3, scale * 0.8); applyTransform(getSvg());
+    });
+    toolbar.querySelector('.btn-reset').addEventListener('click', () => {
+      scale = 1; tx = 0; ty = 0; applyTransform(getSvg());
+    });
+
+    // Fullscreen
+    toolbar.querySelector('.btn-full').addEventListener('click', () => {
+      openModal(inner);
+    });
+  }
+
+  // ── Modal fullscreen com panzoom ─────────────────────────────────────────────
+  const modal   = document.getElementById('diagram-modal');
+  const mCanvas = document.getElementById('diagram-modal-canvas');
+  const mContent= document.getElementById('diagram-modal-content');
+
+  let mScale = 1, mTx = 0, mTy = 0, mDrag = false, mLx = 0, mLy = 0;
+
+  function applyModalTransform() {
+    mContent.style.transform = `translate(${mTx}px,${mTy}px) scale(${mScale})`;
+  }
+
+  function fitModal() {
+    const svg = mContent.querySelector('svg');
+    if (!svg) return;
+    const cw = mCanvas.clientWidth - 48;
+    const ch = mCanvas.clientHeight - 48;
+    const sw = svg.getBBox ? svg.getBBox().width  || svg.clientWidth  : svg.clientWidth;
+    const sh = svg.getBBox ? svg.getBBox().height || svg.clientHeight : svg.clientHeight;
+    mScale = Math.min(cw / (sw||800), ch / (sh||600), 3);
+    mTx = (cw - sw * mScale) / 2 + 24;
+    mTy = (ch - sh * mScale) / 2 + 24;
+    applyModalTransform();
+  }
+
+  function openModal(sourceInner) {
+    const svg = sourceInner.querySelector('svg');
+    if (!svg) return;
+    mContent.innerHTML = '';
+    mContent.appendChild(svg.cloneNode(true));
+    modal.classList.add('open');
+    setTimeout(fitModal, 50);
+  }
+
+  document.getElementById('diagram-modal-close').addEventListener('click', () => modal.classList.remove('open'));
+  document.getElementById('zoom-in').addEventListener('click',  () => { mScale = Math.min(10, mScale * 1.25); applyModalTransform(); });
+  document.getElementById('zoom-out').addEventListener('click', () => { mScale = Math.max(0.1, mScale * 0.8); applyModalTransform(); });
+  document.getElementById('zoom-fit').addEventListener('click', fitModal);
+
+  mCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const f = e.deltaY < 0 ? 1.12 : 0.89;
+    // Zoom centrado no cursor
+    const rect = mCanvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const newScale = Math.max(0.1, Math.min(10, mScale * f));
+    mTx = cx - (cx - mTx) * (newScale / mScale);
+    mTy = cy - (cy - mTy) * (newScale / mScale);
+    mScale = newScale;
+    applyModalTransform();
+  }, { passive: false });
+
+  mCanvas.addEventListener('mousedown', (e) => { mDrag = true; mLx = e.clientX; mLy = e.clientY; mContent.style.cursor = 'grabbing'; });
+  mCanvas.addEventListener('mousemove', (e) => {
+    if (!mDrag) return;
+    mTx += e.clientX - mLx; mTy += e.clientY - mLy;
+    mLx = e.clientX; mLy = e.clientY;
+    applyModalTransform();
+  });
+  ['mouseup','mouseleave'].forEach(ev => mCanvas.addEventListener(ev, () => { mDrag = false; mContent.style.cursor = 'grab'; }));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') modal.classList.remove('open');
+    if (!modal.classList.contains('open')) return;
+    if (e.key === '+' || e.key === '=') { mScale = Math.min(10, mScale * 1.2); applyModalTransform(); }
+    if (e.key === '-')                   { mScale = Math.max(0.1, mScale * 0.83); applyModalTransform(); }
+    if (e.key === '0')                   { fitModal(); }
+  });
+
+  // ── Aguarda Mermaid renderizar e adiciona toolbars ───────────────────────────
+  function setupDiagrams() {
+    document.querySelectorAll('.mermaid-wrap').forEach(wrap => {
+      // Só adiciona toolbar se ainda não adicionou
+      if (!wrap.querySelector('.diagram-toolbar')) {
+        addDiagramToolbar(wrap);
+      }
+    });
+  }
+
+  // Mermaid renderiza de forma assíncrona — observa quando SVGs aparecem
+  const svgObserver = new MutationObserver(() => setupDiagrams());
+  svgObserver.observe(document.body, { childList: true, subtree: true });
+  // Também tenta após load
+  window.addEventListener('load', () => setTimeout(setupDiagrams, 800));
+  setTimeout(setupDiagrams, 2000);
 </script>
 </body>
 </html>
